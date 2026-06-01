@@ -3,511 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมคำนวณกระเบื้อง (Cloud Upload & Auto-Save)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>เมนูระบบจัดการ ME Property</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
         :root {
-            --primary: #2c3e50;
-            --secondary: #18bc9c;
-            --bg-color: #f4f6f9;
-            --card-bg: #ffffff;
-            --border: #dee2e6;
-            --text: #333;
+            --primary-color: #ea580c; /* สีส้มหลัก */
+            --primary-light: #ffedd5; /* สีส้มอ่อน (พื้นหลังไอคอน) */
+            --primary-dark: #c2410c; /* สีส้มเข้ม */
+            --bg-color: #fafaf9; /* สีพื้นหลังหน้าเว็บ (ขาวอมเทานิดๆ ให้การ์ดดูโดดเด่น) */
+            --text-main: #1c1917; /* สีตัวหนังสือหลัก (ดำอมเทา) */
+            --text-muted: #57534e; /* สีตัวหนังสือรอง */
+            --card-bg: #ffffff; /* สีพื้นหลังกล่องเมนู (ขาวสนิท) */
         }
-        * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        
-        .header { background-color: var(--primary); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-        .header h1 { margin: 0; font-size: 26px; }
-        
-        .section-card { background: var(--card-bg); border-radius: 8px; margin-bottom: 20px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow-x: auto; }
-        .section-title { font-size: 20px; font-weight: 600; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid var(--secondary); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; min-width: 800px; }
-        th { background-color: #f8f9fa; text-align: left; padding: 10px; font-size: 15px; border-bottom: 2px solid var(--border); color: #495057; }
-        td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-        
-        input[type="text"], input[type="number"], select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 15px; }
-        .input-sm { width: 80px !important; text-align: center; }
-        
-        .btn { border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; display: inline-block; text-align: center; }
-        .btn:hover { opacity: 0.8; }
-        .btn-primary { background: var(--secondary); color: white; }
-        .btn-danger { background: #e74c3c; color: white; padding: 6px 10px; font-size: 12px; }
-        .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
-        
-        .zone-box { border: 1px solid #bce8f1; border-radius: 6px; margin-bottom: 20px; padding: 15px; background: #f4fcfe; }
-        .zone-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
-        .zone-header input { font-size: 18px; font-weight: bold; width: 300px; border: 1px solid #bce8f1; background: white; }
-        
-        .summary-box { background: #dff0d8; border: 1px solid #d6e9c6; padding: 15px; border-radius: 6px; }
-        
-        .toolbar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
-        .toolbar label { font-weight: 600; color: #c0392b; }
 
-        /* Modal รูปภาพ */
-        #imageModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
-        #imageModal img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .close-modal { position: absolute; top: 20px; right: 40px; color: white; font-size: 40px; font-weight: bold; cursor: pointer; }
-        
-        @media print {
-            body { background: white; padding: 0; }
-            .btn, button, .toolbar { display: none !important; }
-            .section-card { border: none; box-shadow: none; padding: 0; margin-bottom: 30px; }
-            input, select { border: none; appearance: none; background: transparent; padding: 0; color: black !important; }
-            select { -webkit-appearance: none; -moz-appearance: none; }
-            input[type="text"]::placeholder { color: transparent; }
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        .header-container {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header-container h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .header-container p {
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+
+        /* จัดเรียงกล่องให้อยู่ในรูปแบบ Grid รองรับมือถือ */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* ดีไซน์กล่องการ์ด */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border-top: 5px solid var(--primary-color);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid #f5f5f4;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card-header h2 {
+            font-size: 1.3rem;
+            margin: 0;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .card-header i {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+
+        /* ดีไซน์ปุ่มลิงก์ */
+        .menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #fafaf9;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            border: 1px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .icon-box {
+            background-color: var(--primary-light);
+            color: var(--primary-dark);
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-right: 15px;
+            transition: all 0.3s ease;
+        }
+
+        /* เอฟเฟกต์เวลาชี้เมาส์ (Hover) */
+        .menu-item:hover {
+            background-color: #ffffff;
+            border-color: #fdba74; /* กรอบสีส้มอ่อนตอนชี้เมาส์ */
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(234, 88, 12, 0.08), 0 4px 6px -4px rgba(234, 88, 12, 0.05);
+            color: var(--text-main);
+        }
+
+        .menu-item:hover .icon-box {
+            background-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .menu-item .arrow-icon {
+            margin-left: auto;
+            color: #d6d3d1;
+            transition: transform 0.3s ease;
+        }
+
+        .menu-item:hover .arrow-icon {
+            color: var(--primary-color);
+            transform: translateX(4px);
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h1>🛠️ โปรแกรมคำนวณและสรุปยอดสั่งซื้อกระเบื้อง</h1>
+    <div class="header-container">
+        <h1>ME PROPERTY AGENT</h1>
+        <p>เลือกระบบที่คุณต้องการใช้งาน</p>
     </div>
 
-    <div class="toolbar">
-        <span id="sync-status" style="font-size: 14px; color: #7f8c8d; font-weight: 600; margin-right: auto;">☁️ ระบบบันทึกอัตโนมัติพร้อมทำงาน</span>
-        
-        <label>⚠️ เผื่อเศษตัด/แตก: <input type="number" id="waste-percent" value="5" min="0" style="width: 70px;" oninput="updateWaste()"> %</label>
-        <button class="btn btn-danger" onclick="forceClearData()">🗑️ ล้างข้อมูลทั้งหมด</button>
-        <button class="btn btn-outline" onclick="window.print()">🖨️ พิมพ์เอกสาร</button>
-    </div>
+    <div class="dashboard-grid">
 
-    <div class="section-card">
-        <div class="section-title">
-            1. รายละเอียดกระเบื้อง (Tile Catalog)
-            <button class="btn btn-primary" onclick="addTile()">+ เพิ่มกระเบื้อง</button>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 100px; text-align: center;">รูปกระเบื้อง</th>
-                    <th>รหัส/ชื่อรุ่นกระเบื้อง</th>
-                    <th>กว้าง (ซม.)</th>
-                    <th>ยาว (ซม.)</th>
-                    <th>บรรจุ (แผ่น/กล่อง)</th>
-                    <th style="width: 60px;"></th>
-                </tr>
-            </thead>
-            <tbody id="tile-list"></tbody>
-        </table>
-    </div>
-
-    <div class="section-card">
-        <div class="section-title">
-            2. คำนวณพื้นที่ตามโซน
-            <button class="btn btn-primary" onclick="addZone()">+ เพิ่มโซนใหม่</button>
-        </div>
-        <div id="zone-list"></div>
-    </div>
-
-    <div class="section-card summary-box">
-        <div class="section-title" style="color: #3c763d; border-color: #3c763d;">
-            3. สรุปยอดสั่งซื้อทั้งหมด (Order Summary)
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 80px; text-align: center;">ตัวอย่าง</th>
-                    <th>รุ่นกระเบื้อง</th>
-                    <th style="text-align: right;">ปริมาณพื้นที่รวม (ตร.ม.)</th>
-                    <th style="text-align: right;">จำนวนที่ต้องใช้ (เผื่อเศษแล้ว)</th>
-                    <th style="text-align: right;">สรุปจำนวนกล่องที่ต้องสั่งซื้อ</th>
-                    <th style="text-align: center; width: 250px;">หมายเหตุ</th>
-                </tr>
-            </thead>
-            <tbody id="summary-list"></tbody>
-        </table>
-    </div>
-</div>
-
-<div id="imageModal">
-    <span class="close-modal" onclick="closeModal()">&times;</span>
-    <img id="modalImg" src="" alt="ภาพขยายกระเบื้อง">
-</div>
-
-<script>
-    // ------------------------------------------------------------------------------------------
-    // ⚠️ นำ URL ของ Google Apps Script มาวางในเครื่องหมายคำพูดด้านล่างนี้ ห้ามลบฟันหนู (") ออกเด็ดขาด
-    // ------------------------------------------------------------------------------------------
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzjD2DkZ1Dul22vtlLFvrppiEizXjtHuubqwHj0xsoM5H0kFbwif2xavX_qliGgYn2Aeg/exec"; 
-    
-
-    const defaultState = {
-        wastePercent: 5,
-        tiles: [{ id: 'T1', name: 'TJRP0038-อาปาเช่ แบล็ค', w: 40, l: 40, boxQty: 6, image: null, remark: '' }],
-        zones: [{ id: 'Z1', name: 'พื้นโรงจอดรถ', items: [{ name: 'พื้นที่หลัก', tileId: 'T1', areas: [{ w: 2.6, l: 6.6 }] }] }]
-    };
-
-    let state = JSON.parse(JSON.stringify(defaultState));
-    let autoSaveTimeout = null;
-
-    function loadData() {
-        const saved = localStorage.getItem('tileDashboardDataV4');
-        if (saved) {
-            try { 
-                let parsed = JSON.parse(saved); 
-                state.wastePercent = parsed.wastePercent !== undefined ? parsed.wastePercent : 5;
-                state.tiles = parsed.tiles || [];
-                state.zones = parsed.zones || [];
-            } catch (e) { 
-                console.error("Error loading data", e);
-                state = JSON.parse(JSON.stringify(defaultState));
-            }
-        }
-        document.getElementById('waste-percent').value = state.wastePercent;
-        renderAll();
-    }
-
-    function saveData() {
-        localStorage.setItem('tileDashboardDataV4', JSON.stringify(state));
-        
-        document.getElementById('sync-status').innerHTML = "⏳ รอการบันทึก...";
-        document.getElementById('sync-status').style.color = "#f39c12";
-        
-        clearTimeout(autoSaveTimeout);
-        autoSaveTimeout = setTimeout(() => {
-            saveToOnlineDB();
-        }, 3000); 
-    }
-
-    function forceClearData() {
-        if(confirm("ต้องการล้างข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่?")) {
-            localStorage.removeItem('tileDashboardDataV4');
-            state = JSON.parse(JSON.stringify(defaultState));
-            document.getElementById('waste-percent').value = 5;
-            saveData();
-            renderAll();
-        }
-    }
-
-    function generateId() { return Math.random().toString(36).substr(2, 9); }
-    
-    function updateWaste() {
-        state.wastePercent = parseFloat(document.getElementById('waste-percent').value) || 0;
-        saveData();
-        renderSummaryOnly();
-    }
-
-    // --- อัปโหลดรูปภาพขึ้น Cloud ทันที ---
-    async function handleImageUpload(event, index) {
-        if(WEB_APP_URL.includes("xxxxxxxxxx")) {
-            alert("⚠️ กรุณาใส่ URL ของ Google Apps Script ในโค้ดก่อนครับ ถึงจะอัปโหลดรูปได้");
-            return;
-        }
-
-        const file = event.target.files[0];
-        if (!file) return;
-
-        document.getElementById('sync-status').innerHTML = "⏳ กำลังอัปโหลดรูปลง Google Drive...";
-        document.getElementById('sync-status').style.color = "#e67e22";
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = async function() {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 500; 
-                const MAX_HEIGHT = 500;
-                let width = img.width;
-                let height = img.height;
-
-                if (width > height) {
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                } else {
-                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.8); 
-
-                try {
-                    const response = await fetch(WEB_APP_URL, {
-                        method: 'POST',
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ action: 'uploadImage', imageBase64: dataUrl }),
-                        redirect: 'follow'
-                    });
-
-                    const result = await response.json();
-                    if(result.status === "success") {
-                        state.tiles[index].image = result.url; // เก็บแค่ลิงก์
-                        saveData();
-                        renderAll();
-                        document.getElementById('sync-status').innerHTML = "✅ อัปโหลดรูปสำเร็จ";
-                        document.getElementById('sync-status').style.color = "#27ae60";
-                    } else {
-                        alert("อัปโหลดไม่สำเร็จ: " + result.message);
-                    }
-                } catch (error) {
-                    alert("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
-                }
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function removeImage(index) {
-        if(confirm('ลบรูปภาพนี้?')) {
-            state.tiles[index].image = null;
-            saveData();
-            renderAll();
-        }
-    }
-
-    function openModal(imageSrc) {
-        document.getElementById('modalImg').src = imageSrc;
-        document.getElementById('imageModal').style.display = 'flex';
-    }
-    function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
-
-    // --- Data Functions ---
-    function addTile() { state.tiles.push({ id: generateId(), name: 'กระเบื้องใหม่', w: 40, l: 40, boxQty: 10, image: null, remark: '' }); saveData(); renderAll(); }
-    function updateTile(index, field, value) { state.tiles[index][field] = field === 'name' ? value : parseFloat(value) || 0; saveData(); renderAll(); }
-    function removeTile(index) { if(confirm('ลบกระเบื้องนี้?')) { state.tiles.splice(index, 1); saveData(); renderAll(); } }
-    function updateTileRemark(tileId, value) { const tile = state.tiles.find(t => t.id === tileId); if(tile) { tile.remark = value; saveData(); } }
-
-    function addZone() { state.zones.push({ id: generateId(), name: 'โซนใหม่', items: [] }); saveData(); renderAll(); }
-    function updateZoneName(zIdx, value) { state.zones[zIdx].name = value; saveData(); }
-    function removeZone(zIdx) { if(confirm('ลบโซนนี้?')) { state.zones.splice(zIdx, 1); saveData(); renderAll(); } }
-
-    function addItem(zIdx) { state.zones[zIdx].items.push({ name: 'จุดที่ปูใหม่', tileId: state.tiles.length ? state.tiles[0].id : '', areas: [{ w: 0, l: 0 }] }); saveData(); renderAll(); }
-    function updateItem(zIdx, iIdx, field, value) { state.zones[zIdx].items[iIdx][field] = value; saveData(); if(field === 'tileId') renderAll(); }
-    function removeItem(zIdx, iIdx) { state.zones[zIdx].items.splice(iIdx, 1); saveData(); renderAll(); }
-
-    function addArea(zIdx, iIdx) { state.zones[zIdx].items[iIdx].areas.push({ w: 0, l: 0 }); saveData(); renderAll(); }
-    function updateArea(zIdx, iIdx, aIdx, field, value) { state.zones[zIdx].items[iIdx].areas[aIdx][field] = parseFloat(value) || 0; saveData(); renderSummaryOnly(); }
-    function removeArea(zIdx, iIdx, aIdx) { state.zones[zIdx].items[iIdx].areas.splice(aIdx, 1); saveData(); renderAll(); }
-
-    // --- Render Functions ---
-    function renderTiles() {
-        if (!state.tiles || state.tiles.length === 0) {
-            document.getElementById('tile-list').innerHTML = '<tr><td colspan="6" style="text-align:center;">ยังไม่มีข้อมูลกระเบื้อง กรุณากด "+ เพิ่มกระเบื้อง"</td></tr>';
-            return;
-        }
-        
-        const html = state.tiles.map((t, idx) => `
-            <tr>
-                <td style="text-align: center;">
-                    ${t.image ? 
-                        `<div>
-                            <img src="${t.image}" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ccc; cursor: pointer; border-radius: 4px;" onclick="openModal('${t.image}')" title="คลิกเพื่อดูรูปใหญ่">
-                            <br><button class="btn btn-danger" style="padding: 2px 6px; font-size: 11px; margin-top: 5px;" onclick="removeImage(${idx})">ลบรูป</button>
-                        </div>` 
-                        : 
-                        `<label class="btn btn-outline" style="padding: 4px 8px; font-size: 12px; cursor: pointer;">
-                            + เพิ่มรูป
-                            <input type="file" accept="image/*" style="display: none;" onchange="handleImageUpload(event, ${idx})">
-                        </label>`
-                    }
-                </td>
-                <td><input type="text" value="${t.name}" onchange="updateTile(${idx}, 'name', this.value)"></td>
-                <td><input type="number" value="${t.w}" onchange="updateTile(${idx}, 'w', this.value)"></td>
-                <td><input type="number" value="${t.l}" onchange="updateTile(${idx}, 'l', this.value)"></td>
-                <td><input type="number" value="${t.boxQty}" onchange="updateTile(${idx}, 'boxQty', this.value)"></td>
-                <td><button class="btn btn-danger" onclick="removeTile(${idx})">ลบ</button></td>
-            </tr>
-        `).join('');
-        document.getElementById('tile-list').innerHTML = html;
-    }
-
-    function renderZones() {
-        if (!state.zones || state.zones.length === 0) {
-            document.getElementById('zone-list').innerHTML = '<div style="text-align:center; padding: 20px; color:#999;">ยังไม่มีข้อมูลโซน กรุณากด "+ เพิ่มโซนใหม่"</div>';
-            return;
-        }
-
-        const html = state.zones.map((z, zIdx) => `
-            <div class="zone-box">
-                <div class="zone-header">
-                    <input type="text" value="${z.name}" onchange="updateZoneName(${zIdx}, this.value)">
-                    <div>
-                        <button class="btn btn-outline" style="font-size:12px; padding:4px 8px;" onclick="addItem(${zIdx})">+ เพิ่มจุดปูกระเบื้อง</button>
-                        <button class="btn btn-danger" onclick="removeZone(${zIdx})">ลบโซน</button>
-                    </div>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th width="25%">รายการ/จุดที่ปู</th>
-                            <th width="30%">เลือกรุ่นกระเบื้อง</th>
-                            <th width="40%">ขนาดพื้นที่: กว้าง x ยาว (เมตร)</th>
-                            <th width="5%"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${z.items.map((item, iIdx) => `
-                            <tr>
-                                <td><input type="text" value="${item.name}" onchange="updateItem(${zIdx}, ${iIdx}, 'name', this.value)"></td>
-                                <td>
-                                    <select onchange="updateItem(${zIdx}, ${iIdx}, 'tileId', this.value)">
-                                        <option value="">-- เลือกกระเบื้อง --</option>
-                                        ${state.tiles.map(t => `<option value="${t.id}" ${t.id === item.tileId ? 'selected' : ''}>${t.name}</option>`).join('')}
-                                    </select>
-                                </td>
-                                <td>
-                                    ${item.areas.map((area, aIdx) => `
-                                        <div style="display:flex; gap:10px; margin-bottom:5px; align-items:center;">
-                                            <input type="number" step="0.01" class="input-sm" placeholder="กว้าง" value="${area.w || ''}" oninput="updateArea(${zIdx}, ${iIdx}, ${aIdx}, 'w', this.value)">
-                                            <span>x</span>
-                                            <input type="number" step="0.01" class="input-sm" placeholder="ยาว" value="${area.l || ''}" oninput="updateArea(${zIdx}, ${iIdx}, ${aIdx}, 'l', this.value)">
-                                            ${item.areas.length > 1 ? `<button class="btn-danger" style="padding:2px 6px;" onclick="removeArea(${zIdx}, ${iIdx}, ${aIdx})">x</button>` : ''}
-                                        </div>
-                                    `).join('')}
-                                    <button class="btn btn-outline" style="font-size:11px; padding:2px 5px;" onclick="addArea(${zIdx}, ${iIdx})">+ พื้นที่ย่อย</button>
-                                </td>
-                                <td><button class="btn btn-danger" onclick="removeItem(${zIdx}, ${iIdx})">ลบ</button></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-folder-open"></i>
+                <h2>งาน Project</h2>
             </div>
-        `).join('');
-        document.getElementById('zone-list').innerHTML = html;
-    }
+            <div class="menu-list">
+                <a href="https://renovate-billing-app-rme5.vercel.app/" class="menu-item">
+                    <div class="icon-box"><i class="fa-solid fa-wallet"></i></div>
+                    บัญชี 
+                    <i class="fa-solid fa-chevron-right arrow-icon"></i>
+                </a>
+                <a href="https://my-equipment-check.tiiny.site/?mode=suggestions" class="menu-item">
+                    <div class="icon-box"><i class="fa-solid fa-clipboard-list"></i></div>
+                    เช็คอุปกรณ์-สั่งของ
+                    <i class="fa-solid fa-chevron-right arrow-icon"></i>
+                </a>
+		<a href="https://tile-manager.vercel.app/" class="menu-item">
+                    <div class="icon-box"><i class="fa-solid fa-border-all"></i></div>
+                    คำนวนกระเบื้อง
+                    <i class="fa-solid fa-chevron-right arrow-icon"></i>
+                </a>
+                <a href="https://floor-material-database.vercel.app/" class="menu-item">
+                    <div class="icon-box"><i class="fa-solid fa-calculator"></i></div>
+                    คำนวนงานปู SPC 
+                    <i class="fa-solid fa-chevron-right arrow-icon"></i>
+                </a>
+            </div>
+        </div>
 
-    function renderSummaryOnly() {
-        const wastePercent = state.wastePercent || 0;
-        let summaryData = {};
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-file-signature"></i>
+                <h2>แบบฟอร์มต่างๆ</h2>
+            </div>
+            <div class="menu-list">
+                <a href="https://inspection-system-three.vercel.app/" class="menu-item">
+                    <div class="icon-box"><i class="fa-solid fa-couch"></i></div>
+                    แบบฟอร์ม เช็คลิสเฟอร์นิเจอร์
+                    <i class="fa-solid fa-chevron-right arrow-icon"></i>
+                </a>
+            </div>
+        </div>
 
-        if (state.tiles) {
-            state.tiles.forEach(t => {
-                summaryData[t.id] = { id: t.id, name: t.name, image: t.image, remark: t.remark || '', totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000 };
-            });
-        }
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-thumbtack"></i>
+                <h2>อื่นๆ</h2>
+            </div>
+            <div class="menu-list">
+                <a href="https://termite-system-opal.vercel.app/" class="menu-item">
+                    <div class="icon-box"><i class="fa-solid fa-bug"></i></div>
+                    ตารางนัดปลวก
+                    <i class="fa-solid fa-chevron-right arrow-icon"></i>
+                </a>
+		<a href="https://mechanical-work.vercel.app/" class="menu-item">
+                    <div class="icon-box"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                    สรุปงานช่าง
+                    <i class="fa-solid fa-chevron-right arrow-icon"></i>
+                </a>
+            </div>
+        </div>
 
-        if (state.zones) {
-            state.zones.forEach(z => {
-                z.items.forEach(item => {
-                    if (item.tileId && summaryData[item.tileId]) {
-                        let totalArea = 0;
-                        item.areas.forEach(a => totalArea += (a.w * a.l));
-                        summaryData[item.tileId].totalSqm += totalArea;
-                    }
-                });
-            });
-        }
-
-        let html = '';
-        let hasData = false;
-        
-        Object.values(summaryData).forEach(data => {
-            if (data.totalSqm > 0) {
-                hasData = true;
-                let baseTiles = Math.ceil(data.totalSqm / data.sqmPerTile);
-                let finalTiles = Math.ceil(baseTiles * (1 + (wastePercent / 100)));
-                let finalBoxes = data.boxQty > 0 ? Math.ceil(finalTiles / data.boxQty) : 0;
-
-                html += `
-                    <tr>
-                        <td style="text-align: center;">
-                            ${data.image && data.image.includes('http') ? `<img src="${data.image}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">` : `<span style="color:#aaa; font-size: 12px;">ไม่มีรูป</span>`}
-                        </td>
-                        <td><b>${data.name}</b></td>
-                        <td style="text-align: right;">${data.totalSqm.toFixed(2)} ตร.ม.</td>
-                        <td style="text-align: right; color:#d35400; font-weight:bold;">${finalTiles} แผ่น</td>
-                        <td style="text-align: right; color:#27ae60; font-size:18px; font-weight:bold;">${finalBoxes} กล่อง</td>
-                        <td style="text-align: center;">
-                            <input type="text" placeholder="ระบุหมายเหตุ..." value="${data.remark}" onchange="updateTileRemark('${data.id}', this.value)" style="width: 100%; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 14px;">
-                        </td>
-                    </tr>
-                `;
-            }
-        });
-
-        if(!hasData) html = '<tr><td colspan="6" style="text-align:center; color:#999;">ยังไม่มีการระบุพื้นที่กระเบื้อง</td></tr>';
-        document.getElementById('summary-list').innerHTML = html;
-    }
-
-    function renderAll() {
-        try { renderTiles(); renderZones(); renderSummaryOnly(); } 
-        catch (e) { console.error("Render Error:", e); }
-    }
-
-    // --- ซิงค์ข้อมูลทั้งหมดลง Google Sheets ---
-    async function saveToOnlineDB() {
-        const statusEl = document.getElementById('sync-status');
-
-        if(WEB_APP_URL.includes("xxxxxxxxxx")) {
-            statusEl.innerHTML = "⚠️ ยังไม่ได้ใส่ลิงก์ Google Sheets (บันทึกเฉพาะในเครื่อง)";
-            statusEl.style.color = "#e74c3c";
-            return;
-        }
-
-        statusEl.innerHTML = "🔄 กำลังอัปเดตข้อมูลขึ้นคลาวด์...";
-        statusEl.style.color = "#2980b9";
-
-        let orderPayload = [];
-        let summaryData = {};
-        
-        state.tiles.forEach(t => {
-            summaryData[t.id] = { name: t.name, totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000, remark: t.remark || '', image: t.image };
-        });
-        state.zones.forEach(z => {
-            z.items.forEach(item => {
-                if (item.tileId && summaryData[item.tileId]) {
-                    item.areas.forEach(a => summaryData[item.tileId].totalSqm += (a.w * a.l));
-                }
-            });
-        });
-
-        Object.values(summaryData).forEach(data => {
-            if (data.totalSqm > 0) {
-                let baseTiles = Math.ceil(data.totalSqm / data.sqmPerTile);
-                let finalTiles = Math.ceil(baseTiles * (1 + (state.wastePercent / 100)));
-                let finalBoxes = data.boxQty > 0 ? Math.ceil(finalTiles / data.boxQty) : 0;
-                
-                orderPayload.push({
-                    name: data.name,
-                    sqm: data.totalSqm.toFixed(2),
-                    tiles: finalTiles,
-                    boxes: finalBoxes,
-                    remark: data.remark,
-                    imageUrl: data.image // ส่งเป็น URL รูปไปลงคอลัมน์ G
-                });
-            }
-        });
-
-        if(orderPayload.length === 0) {
-            statusEl.innerHTML = "☁️ ไม่มีข้อมูลสำหรับบันทึก";
-            statusEl.style.color = "#7f8c8d";
-            return;
-        }
-
-        try {
-            const response = await fetch(WEB_APP_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                body: JSON.stringify({ action: "syncData", items: orderPayload }),
-                redirect: "follow"
-            });
-            const result = await response.json();
-            
-            if(result.status === "success") {
-                let now = new Date();
-                statusEl.innerHTML = `✅ บันทึกออนไลน์ล่าสุดเมื่อ ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`;
-                statusEl.style.color = "#27ae60";
-            } else {
-                statusEl.innerHTML = "❌ บันทึกผิดพลาด";
-                statusEl.style.color = "#c0392b";
-            }
-        } catch (error) {
-            statusEl.innerHTML = "❌ ขัดข้องจากการเชื่อมต่อ";
-            statusEl.style.color = "#c0392b";
-        }
-    }
-
-    window.addEventListener('keydown', function(event) { if (event.key === "Escape") closeModal(); });
-    loadData();
-</script>
+    </div>
 
 </body>
 </html>
