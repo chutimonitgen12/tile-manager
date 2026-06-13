@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมคำนวณกระเบื้อง (รองรับระบบโปรเจกต์ & คลาวด์)</title>
+    <title>โปรแกรมคำนวณกระเบื้อง (True Cloud Sync)</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -41,6 +41,8 @@
         .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
         .btn-blue { background: #3498db; color: white; }
         .btn-excel { background: #27ae60; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-sync { background: #8e44ad; color: white; }
         
         .zone-box { border: 1px solid #bce8f1; border-radius: 6px; margin-bottom: 20px; padding: 15px; background: #f4fcfe; }
         .zone-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
@@ -48,7 +50,7 @@
         
         .summary-box { background: #dff0d8; border: 1px solid #d6e9c6; padding: 15px; border-radius: 6px; }
         
-        .toolbar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
+        .toolbar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; }
         .toolbar label { font-weight: 600; color: #c0392b; }
 
         #imageModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
@@ -78,13 +80,18 @@
         <button class="btn btn-blue" onclick="createNewProject()">+ สร้างใหม่</button>
         <button class="btn btn-outline" onclick="renameProject()">✏️ เปลี่ยนชื่อ</button>
         <button class="btn btn-danger" style="padding: 8px 15px; font-size: 14px;" onclick="deleteProject()">🗑️ ลบโปรเจกต์นี้</button>
+        
+        <div style="margin-left: auto; display: flex; gap: 10px;">
+            <button class="btn btn-sync" onclick="forceLoadFromCloud()" title="ดึงข้อมูลที่อัปเดตจากเครื่องอื่น">🔄 โหลดข้อมูลจากคลาวด์</button>
+            <button class="btn btn-warning" onclick="exportBackup()" title="เซฟข้อมูลไว้ในเครื่อง">💾 แบ็คอัปไฟล์</button>
+        </div>
     </div>
 
     <div class="toolbar">
         <span id="sync-status" style="font-size: 14px; color: #7f8c8d; font-weight: 600; margin-right: auto;">☁️ ระบบบันทึกอัตโนมัติพร้อมทำงาน</span>
         
         <label>⚠️ เผื่อเศษตัด/แตก: <input type="number" id="waste-percent" value="5" min="0" style="width: 70px;" oninput="updateWaste()"> %</label>
-        <button class="btn btn-excel" onclick="exportToExcel()">📊 ส่งออก Excel (.csv)</button>
+        <button class="btn btn-excel" onclick="exportToExcel()">📊 ส่งออก Excel</button>
         <button class="btn btn-danger" onclick="forceClearData()">🧹 ล้างตารางโปรเจกต์นี้</button>
         <button class="btn btn-outline" onclick="window.print()">🖨️ พิมพ์เอกสาร</button>
     </div>
@@ -143,7 +150,10 @@
 </div>
 
 <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyWYXkzz68DiyzDB8dzhn7zBdgIAH4SPW7JkCMe8qHukjNrbPL9_0U_9rvrQ9DNRvmphw/exec"; 
+    // ------------------------------------------------------------------------------------------
+    // ⚠️ นำ URL ของ Google Apps Script มาวางในเครื่องหมายคำพูดด้านล่างนี้
+    // ------------------------------------------------------------------------------------------
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzJxFZlNlIMeKoTj5fs8XErmgovZRc-3rTYN8eN5pfwZXsPJskfMSQPh-s-1xJY7vX3Ww/exec"; 
     
     const defaultProjectState = {
         name: 'โปรเจกต์ลูกค้าใหม่',
@@ -160,10 +170,11 @@
     let state = null; 
     let autoSaveTimeout = null;
 
+    // โหลดข้อมูลตอนเปิดโปรแกรม
     function loadData() {
-        const saved = localStorage.getItem('tileAppProjectsV2'); // อัปเดต key เป็น V2 เพื่อหลีกเลี่ยงปัญหาโครงสร้างข้อมูลเก่า
+        const saved = localStorage.getItem('tileAppCloudSync'); 
         if (saved) {
-            try { appData = JSON.parse(saved); } catch (e) { console.error("Error parsing projects", e); }
+            try { appData = JSON.parse(saved); } catch (e) { }
         }
         if (!appData.projects || Object.keys(appData.projects).length === 0) {
             appData.projects = { 'proj_1': JSON.parse(JSON.stringify(defaultProjectState)) };
@@ -176,17 +187,70 @@
         
         renderProjectSelector();
         renderAll();
+
+        // ⚠️ โหลดข้อมูลจากคลาวด์อัตโนมัติเมื่อเปิดเว็บ
+        forceLoadFromCloud();
     }
 
+    // เซฟข้อมูล (แยกเซฟลงเครื่อง และหน่วงเวลาเซฟขึ้นคลาวด์)
     function saveData() {
-        appData.projects[appData.currentId] = state;
-        localStorage.setItem('tileAppProjectsV2', JSON.stringify(appData));
+        saveDataLocalOnly();
         
         document.getElementById('sync-status').innerHTML = "⏳ รอการบันทึก...";
         document.getElementById('sync-status').style.color = "#f39c12";
         
         clearTimeout(autoSaveTimeout);
-        autoSaveTimeout = setTimeout(() => { saveToOnlineDB(); }, 3000); 
+        autoSaveTimeout = setTimeout(() => { typeof saveToOnlineDB === 'function' && saveToOnlineDB(); }, 3000); 
+    }
+
+    function saveDataLocalOnly() {
+        appData.projects[appData.currentId] = state;
+        localStorage.setItem('tileAppCloudSync', JSON.stringify(appData));
+    }
+
+    // --- ⚠️ ระบบดึงข้อมูลจาก Cloud (Cloud Sync) ---
+    async function forceLoadFromCloud() {
+        if(WEB_APP_URL.includes("xxxxxxxxxx")) return;
+        const statusEl = document.getElementById('sync-status');
+        statusEl.innerHTML = "🔄 กำลังเช็กข้อมูลอัปเดตจากคลาวด์...";
+        statusEl.style.color = "#8e44ad";
+
+        try {
+            const response = await fetch(WEB_APP_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+                body: JSON.stringify({ action: "loadData" }), redirect: "follow"
+            });
+            const result = await response.json();
+            
+            if(result.status === "success" && result.appData) {
+                appData = result.appData; // เอาข้อมูลจากคลาวด์มาทับของเดิม
+                if (!appData.projects[appData.currentId]) appData.currentId = Object.keys(appData.projects)[0];
+                state = appData.projects[appData.currentId];
+                document.getElementById('waste-percent').value = state.wastePercent;
+                
+                saveDataLocalOnly(); // เซฟลงเครื่อง
+                renderProjectSelector();
+                renderAll();
+                
+                statusEl.innerHTML = "✅ โหลดข้อมูลล่าสุดจากคลาวด์สำเร็จ";
+                statusEl.style.color = "#27ae60";
+            } else {
+                statusEl.innerHTML = "☁️ ฐานข้อมูลคลาวด์ยังว่างเปล่า";
+                statusEl.style.color = "#7f8c8d";
+            }
+        } catch (error) { 
+            statusEl.innerHTML = "❌ ขัดข้อง ไม่สามารถดึงข้อมูลคลาวด์ได้"; 
+            statusEl.style.color = "#c0392b"; 
+        }
+    }
+
+    // --- Backup System ---
+    function exportBackup() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+        const dlAnchorElem = document.createElement('a');
+        dlAnchorElem.setAttribute("href", dataStr);
+        dlAnchorElem.setAttribute("download", `TileApp_Backup_${new Date().getTime()}.json`);
+        dlAnchorElem.click();
     }
 
     // --- Project Manager ---
@@ -295,7 +359,6 @@
     function updateArea(zIdx, iIdx, aIdx, field, value) { state.zones[zIdx].items[iIdx].areas[aIdx][field] = parseFloat(value) || 0; saveData(); renderSummaryOnly(); }
     function removeArea(zIdx, iIdx, aIdx) { state.zones[zIdx].items[iIdx].areas.splice(aIdx, 1); saveData(); renderAll(); }
 
-    // ฟังก์ชันใหม่สำหรับการจัดการหักลบพื้นที่
     function addDeduction(zIdx, iIdx) { 
         if(!state.zones[zIdx].items[iIdx].deductions) state.zones[zIdx].items[iIdx].deductions = [];
         state.zones[zIdx].items[iIdx].deductions.push({ name: 'หักประตู/หน้าต่าง', w: 0, l: 0 }); 
@@ -308,12 +371,10 @@
     }
     function removeDeduction(zIdx, iIdx, dIdx) { state.zones[zIdx].items[iIdx].deductions.splice(dIdx, 1); saveData(); renderAll(); }
 
-    // --- ฟังก์ชันส่งออกข้อมูลเป็น Excel (.csv รองรับภาษาไทย) ---
+    // --- ฟังก์ชันส่งออก Excel ---
     function exportToExcel() {
         if (!state) return alert("ไม่มีข้อมูลให้ส่งออก");
-        
         let csvContent = "\uFEFF"; 
-        
         csvContent += `ชื่อโปรเจกต์:,${state.name}\n`;
         csvContent += `การเผื่อเศษตัดแตก:,${state.wastePercent} %\n\n`;
         
@@ -321,26 +382,16 @@
         csvContent += `รหัส/ชื่อรุ่นกระเบื้อง,กว้าง (ซม.),ยาว (ซม.),บรรจุ (แผ่น/กล่อง),หมายเหตุ,ลิงก์รูปภาพ\n`;
         
         state.tiles.forEach(t => {
-            let row = [
-                `"${t.name.replace(/"/g, '""')}"`,
-                t.w,
-                t.l,
-                t.boxQty,
-                `"${(t.remark || '').replace(/"/g, '""')}"`,
-                t.image || ''
-            ];
+            let row = [`"${t.name.replace(/"/g, '""')}"`, t.w, t.l, t.boxQty, `"${(t.remark || '').replace(/"/g, '""')}"`, t.image || ''];
             csvContent += row.join(",") + "\n";
         });
-        
         csvContent += "\n";
         
         csvContent += `2. สรุปยอดสั่งซื้อทั้งหมด (Order Summary)\n`;
         csvContent += `รุ่นกระเบื้อง,ปริมาณพื้นที่รวม (ตร.ม.),จำนวนที่ต้องใช้ (แผ่น),สรุปจำนวนกล่องที่ต้องสั่งซื้อ,หมายเหตุ\n`;
         
         let summaryData = {};
-        state.tiles.forEach(t => {
-            summaryData[t.id] = { name: t.name, remark: t.remark || '', totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000 };
-        });
+        state.tiles.forEach(t => { summaryData[t.id] = { name: t.name, remark: t.remark || '', totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000 }; });
         
         state.zones.forEach(z => {
             z.items.forEach(item => {
@@ -362,13 +413,7 @@
                 let finalTiles = Math.ceil(baseTiles * (1 + (state.wastePercent / 100)));
                 let finalBoxes = data.boxQty > 0 ? Math.ceil(finalTiles / data.boxQty) : 0;
                 
-                let row = [
-                    `"${data.name.replace(/"/g, '""')}"`,
-                    data.totalSqm.toFixed(2),
-                    finalTiles,
-                    finalBoxes,
-                    `"${data.remark.replace(/"/g, '""')}"`
-                ];
+                let row = [`"${data.name.replace(/"/g, '""')}"`, data.totalSqm.toFixed(2), finalTiles, finalBoxes, `"${data.remark.replace(/"/g, '""')}"`];
                 csvContent += row.join(",") + "\n";
             }
         });
@@ -385,7 +430,6 @@
         link.click();
         document.body.removeChild(link);
     }
-
 
     // --- Render ---
     function renderTiles() {
@@ -477,15 +521,9 @@
                 z.items.forEach(item => {
                     if (item.tileId && summaryData[item.tileId]) {
                         let totalArea = 0;
-                        // บวกพื้นที่หลัก
                         item.areas.forEach(a => totalArea += (a.w * a.l));
-                        // ลบพื้นที่หักออก
-                        if(item.deductions) {
-                            item.deductions.forEach(d => totalArea -= (d.w * d.l));
-                        }
-                        // ป้องกันไม่ให้พื้นที่ติดลบกรณีใส่ตัวเลขผิด
+                        if(item.deductions) item.deductions.forEach(d => totalArea -= (d.w * d.l));
                         if(totalArea < 0) totalArea = 0; 
-                        
                         summaryData[item.tileId].totalSqm += totalArea;
                     }
                 });
@@ -550,7 +588,8 @@
         try {
             const response = await fetch(WEB_APP_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                body: JSON.stringify({ action: "syncData", projectName: state.name, items: orderPayload }), redirect: "follow"
+                // ⚠️ ส่ง appData ก้อนใหญ่กลับไปเก็บไว้ในแท็บลับด้วย
+                body: JSON.stringify({ action: "syncData", projectName: state.name, items: orderPayload, appData: appData }), redirect: "follow"
             });
             const result = await response.json();
             if(result.status === "success") {
