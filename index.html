@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมคำนวณกระเบื้อง (Cloud Upload & Auto-Save)</title>
+    <title>โปรแกรมคำนวณกระเบื้อง (รองรับระบบโปรเจกต์ & คลาวด์)</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -21,6 +21,9 @@
         .header { background-color: var(--primary); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
         .header h1 { margin: 0; font-size: 26px; }
         
+        .project-toolbar { background: white; padding: 15px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); flex-wrap: wrap; }
+        .project-toolbar select { padding: 6px 10px; font-size: 16px; font-weight: bold; color: var(--primary); border: 2px solid var(--primary); border-radius: 6px; width: 250px; cursor: pointer; }
+
         .section-card { background: var(--card-bg); border-radius: 8px; margin-bottom: 20px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow-x: auto; }
         .section-title { font-size: 20px; font-weight: 600; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid var(--secondary); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         
@@ -36,6 +39,7 @@
         .btn-primary { background: var(--secondary); color: white; }
         .btn-danger { background: #e74c3c; color: white; padding: 6px 10px; font-size: 12px; }
         .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+        .btn-blue { background: #3498db; color: white; }
         
         .zone-box { border: 1px solid #bce8f1; border-radius: 6px; margin-bottom: 20px; padding: 15px; background: #f4fcfe; }
         .zone-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
@@ -46,14 +50,13 @@
         .toolbar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
         .toolbar label { font-weight: 600; color: #c0392b; }
 
-        /* Modal รูปภาพ */
         #imageModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
         #imageModal img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .close-modal { position: absolute; top: 20px; right: 40px; color: white; font-size: 40px; font-weight: bold; cursor: pointer; }
         
         @media print {
             body { background: white; padding: 0; }
-            .btn, button, .toolbar { display: none !important; }
+            .btn, button, .toolbar, .project-toolbar { display: none !important; }
             .section-card { border: none; box-shadow: none; padding: 0; margin-bottom: 30px; }
             input, select { border: none; appearance: none; background: transparent; padding: 0; color: black !important; }
             select { -webkit-appearance: none; -moz-appearance: none; }
@@ -68,11 +71,19 @@
         <h1>🛠️ โปรแกรมคำนวณและสรุปยอดสั่งซื้อกระเบื้อง</h1>
     </div>
 
+    <div class="project-toolbar">
+        <label style="font-weight: bold; color: var(--primary); font-size: 16px;">📂 เลือกโปรเจกต์:</label>
+        <select id="project-selector" onchange="switchProject(this.value)"></select>
+        <button class="btn btn-blue" onclick="createNewProject()">+ สร้างใหม่</button>
+        <button class="btn btn-outline" onclick="renameProject()">✏️ เปลี่ยนชื่อ</button>
+        <button class="btn btn-danger" style="padding: 8px 15px; font-size: 14px;" onclick="deleteProject()">🗑️ ลบโปรเจกต์นี้</button>
+    </div>
+
     <div class="toolbar">
         <span id="sync-status" style="font-size: 14px; color: #7f8c8d; font-weight: 600; margin-right: auto;">☁️ ระบบบันทึกอัตโนมัติพร้อมทำงาน</span>
         
         <label>⚠️ เผื่อเศษตัด/แตก: <input type="number" id="waste-percent" value="5" min="0" style="width: 70px;" oninput="updateWaste()"> %</label>
-        <button class="btn btn-danger" onclick="forceClearData()">🗑️ ล้างข้อมูลทั้งหมด</button>
+        <button class="btn btn-danger" onclick="forceClearData()">🧹 ล้างตารางโปรเจกต์นี้</button>
         <button class="btn btn-outline" onclick="window.print()">🖨️ พิมพ์เอกสาร</button>
     </div>
 
@@ -98,7 +109,7 @@
 
     <div class="section-card">
         <div class="section-title">
-            2. คำนวณพื้นที่ตามโซน
+            2. คำนวณพื้นที่ตามโซน (รองรับการหักลบพื้นที่)
             <button class="btn btn-primary" onclick="addZone()">+ เพิ่มโซนใหม่</button>
         </div>
         <div id="zone-list"></div>
@@ -106,7 +117,7 @@
 
     <div class="section-card summary-box">
         <div class="section-title" style="color: #3c763d; border-color: #3c763d;">
-            3. สรุปยอดสั่งซื้อทั้งหมด (Order Summary)
+            3. สรุปยอดสั่งซื้อ (Order Summary)
         </div>
         <table>
             <thead>
@@ -130,79 +141,107 @@
 </div>
 
 <script>
-    // ------------------------------------------------------------------------------------------
-    // ⚠️ นำ URL ของ Google Apps Script มาวางในเครื่องหมายคำพูดด้านล่างนี้ ห้ามลบฟันหนู (") ออกเด็ดขาด
-    // ------------------------------------------------------------------------------------------
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzjD2DkZ1Dul22vtlLFvrppiEizXjtHuubqwHj0xsoM5H0kFbwif2xavX_qliGgYn2Aeg/exec"; 
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzJxFZlNlIMeKoTj5fs8XErmgovZRc-3rTYN8eN5pfwZXsPJskfMSQPh-s-1xJY7vX3Ww/exec"; 
     
-
-    const defaultState = {
+    const defaultProjectState = {
+        name: 'โปรเจกต์ลูกค้าใหม่',
         wastePercent: 5,
         tiles: [{ id: 'T1', name: 'TJRP0038-อาปาเช่ แบล็ค', w: 40, l: 40, boxQty: 6, image: null, remark: '' }],
-        zones: [{ id: 'Z1', name: 'พื้นโรงจอดรถ', items: [{ name: 'พื้นที่หลัก', tileId: 'T1', areas: [{ w: 2.6, l: 6.6 }] }] }]
+        zones: [{ id: 'Z1', name: 'พื้นจอดรถ', items: [{ name: 'พื้นที่หลัก', tileId: 'T1', areas: [{ w: 2.6, l: 6.6 }], deductions: [] }] }]
     };
 
-    let state = JSON.parse(JSON.stringify(defaultState));
+    let appData = {
+        currentId: 'proj_1',
+        projects: { 'proj_1': JSON.parse(JSON.stringify(defaultProjectState)) }
+    };
+    
+    let state = null; 
     let autoSaveTimeout = null;
 
     function loadData() {
-        const saved = localStorage.getItem('tileDashboardDataV4');
+        const saved = localStorage.getItem('tileAppProjectsV2'); // อัปเดต key เป็น V2 เพื่อหลีกเลี่ยงปัญหาโครงสร้างข้อมูลเก่า
         if (saved) {
-            try { 
-                let parsed = JSON.parse(saved); 
-                state.wastePercent = parsed.wastePercent !== undefined ? parsed.wastePercent : 5;
-                state.tiles = parsed.tiles || [];
-                state.zones = parsed.zones || [];
-            } catch (e) { 
-                console.error("Error loading data", e);
-                state = JSON.parse(JSON.stringify(defaultState));
-            }
+            try { appData = JSON.parse(saved); } catch (e) { console.error("Error parsing projects", e); }
         }
+        if (!appData.projects || Object.keys(appData.projects).length === 0) {
+            appData.projects = { 'proj_1': JSON.parse(JSON.stringify(defaultProjectState)) };
+            appData.currentId = 'proj_1';
+        }
+        if (!appData.projects[appData.currentId]) appData.currentId = Object.keys(appData.projects)[0];
+
+        state = appData.projects[appData.currentId];
         document.getElementById('waste-percent').value = state.wastePercent;
+        
+        renderProjectSelector();
         renderAll();
     }
 
     function saveData() {
-        localStorage.setItem('tileDashboardDataV4', JSON.stringify(state));
+        appData.projects[appData.currentId] = state;
+        localStorage.setItem('tileAppProjectsV2', JSON.stringify(appData));
         
         document.getElementById('sync-status').innerHTML = "⏳ รอการบันทึก...";
         document.getElementById('sync-status').style.color = "#f39c12";
         
         clearTimeout(autoSaveTimeout);
-        autoSaveTimeout = setTimeout(() => {
-            saveToOnlineDB();
-        }, 3000); 
+        autoSaveTimeout = setTimeout(() => { saveToOnlineDB(); }, 3000); 
+    }
+
+    // --- Project Manager ---
+    function renderProjectSelector() {
+        const sel = document.getElementById('project-selector');
+        sel.innerHTML = Object.keys(appData.projects).map(id => 
+            `<option value="${id}" ${id === appData.currentId ? 'selected' : ''}>${appData.projects[id].name}</option>`
+        ).join('');
+    }
+
+    function switchProject(id) {
+        appData.currentId = id; state = appData.projects[id];
+        document.getElementById('waste-percent').value = state.wastePercent || 5;
+        saveData(); renderAll();
+    }
+
+    function createNewProject() {
+        const name = prompt("ตั้งชื่อโปรเจกต์ใหม่:");
+        if (name) {
+            const id = 'proj_' + new Date().getTime();
+            appData.projects[id] = JSON.parse(JSON.stringify(defaultProjectState));
+            appData.projects[id].name = name; appData.currentId = id; state = appData.projects[id];
+            saveData(); renderProjectSelector(); renderAll();
+        }
+    }
+
+    function renameProject() {
+        const newName = prompt("เปลี่ยนชื่อโปรเจกต์:", state.name);
+        if (newName) { state.name = newName; saveData(); renderProjectSelector(); }
+    }
+
+    function deleteProject() {
+        if (Object.keys(appData.projects).length <= 1) return alert("ไม่สามารถลบได้ ต้องมีอย่างน้อย 1 โปรเจกต์ในระบบ");
+        if (confirm(`คุณต้องการลบโปรเจกต์ "${state.name}" ใช่หรือไม่?\nข้อมูลทั้งหมดในโปรเจกต์นี้จะหายไป`)) {
+            delete appData.projects[appData.currentId];
+            appData.currentId = Object.keys(appData.projects)[0]; state = appData.projects[appData.currentId];
+            saveData(); renderProjectSelector(); renderAll();
+        }
     }
 
     function forceClearData() {
-        if(confirm("ต้องการล้างข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่?")) {
-            localStorage.removeItem('tileDashboardDataV4');
-            state = JSON.parse(JSON.stringify(defaultState));
-            document.getElementById('waste-percent').value = 5;
-            saveData();
-            renderAll();
+        if(confirm(`ต้องการล้างข้อมูลกระเบื้องทั้งหมดในโปรเจกต์ "${state.name}" กลับเป็นค่าเริ่มต้นหรือไม่?`)) {
+            state.tiles = [{ id: 'T1', name: 'TJRP0038-อาปาเช่ แบล็ค', w: 40, l: 40, boxQty: 6, image: null, remark: '' }];
+            state.zones = [{ id: 'Z1', name: 'พื้นจอดรถ', items: [{ name: 'พื้นที่หลัก', tileId: 'T1', areas: [{ w: 2.6, l: 6.6 }], deductions: [] }] }];
+            state.wastePercent = 5; document.getElementById('waste-percent').value = 5;
+            saveData(); renderAll();
         }
     }
 
     function generateId() { return Math.random().toString(36).substr(2, 9); }
-    
-    function updateWaste() {
-        state.wastePercent = parseFloat(document.getElementById('waste-percent').value) || 0;
-        saveData();
-        renderSummaryOnly();
-    }
+    function updateWaste() { state.wastePercent = parseFloat(document.getElementById('waste-percent').value) || 0; saveData(); renderSummaryOnly(); }
 
-    // --- อัปโหลดรูปภาพขึ้น Cloud ทันที ---
+    // --- Image Upload ---
     async function handleImageUpload(event, index) {
-        if(WEB_APP_URL.includes("xxxxxxxxxx")) {
-            alert("⚠️ กรุณาใส่ URL ของ Google Apps Script ในโค้ดก่อนครับ ถึงจะอัปโหลดรูปได้");
-            return;
-        }
-
         const file = event.target.files[0];
         if (!file) return;
-
-        document.getElementById('sync-status').innerHTML = "⏳ กำลังอัปโหลดรูปลง Google Drive...";
+        document.getElementById('sync-status').innerHTML = "⏳ กำลังอัปโหลดรูป...";
         document.getElementById('sync-status').style.color = "#e67e22";
 
         const reader = new FileReader();
@@ -210,66 +249,32 @@
             const img = new Image();
             img.onload = async function() {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 500; 
-                const MAX_HEIGHT = 500;
-                let width = img.width;
-                let height = img.height;
-
-                if (width > height) {
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                } else {
-                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
+                let width = img.width, height = img.height; const MAX = 500; 
+                if (width > height && width > MAX) { height *= MAX / width; width = MAX; } 
+                else if (height > MAX) { width *= MAX / height; height = MAX; }
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.8); 
 
                 try {
                     const response = await fetch(WEB_APP_URL, {
-                        method: 'POST',
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ action: 'uploadImage', imageBase64: dataUrl }),
-                        redirect: 'follow'
+                        method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({ action: 'uploadImage', imageBase64: dataUrl }), redirect: 'follow'
                     });
-
                     const result = await response.json();
                     if(result.status === "success") {
-                        state.tiles[index].image = result.url; // เก็บแค่ลิงก์
-                        saveData();
-                        renderAll();
-                        document.getElementById('sync-status').innerHTML = "✅ อัปโหลดรูปสำเร็จ";
-                        document.getElementById('sync-status').style.color = "#27ae60";
-                    } else {
-                        alert("อัปโหลดไม่สำเร็จ: " + result.message);
-                    }
-                } catch (error) {
-                    alert("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
-                }
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+                        state.tiles[index].image = result.url; saveData(); renderAll();
+                        document.getElementById('sync-status').innerHTML = "✅ อัปโหลดรูปสำเร็จ"; document.getElementById('sync-status').style.color = "#27ae60";
+                    } else alert("อัปโหลดไม่สำเร็จ: " + result.message);
+                } catch (error) { alert("❌ เชื่อมต่อไม่ได้"); }
+            }; img.src = e.target.result;
+        }; reader.readAsDataURL(file);
     }
-
-    function removeImage(index) {
-        if(confirm('ลบรูปภาพนี้?')) {
-            state.tiles[index].image = null;
-            saveData();
-            renderAll();
-        }
-    }
-
-    function openModal(imageSrc) {
-        document.getElementById('modalImg').src = imageSrc;
-        document.getElementById('imageModal').style.display = 'flex';
-    }
+    function removeImage(index) { if(confirm('ลบรูปภาพนี้?')) { state.tiles[index].image = null; saveData(); renderAll(); } }
+    function openModal(imageSrc) { document.getElementById('modalImg').src = imageSrc; document.getElementById('imageModal').style.display = 'flex'; }
     function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
-    // --- Data Functions ---
+    // --- Data Management Functions ---
     function addTile() { state.tiles.push({ id: generateId(), name: 'กระเบื้องใหม่', w: 40, l: 40, boxQty: 10, image: null, remark: '' }); saveData(); renderAll(); }
     function updateTile(index, field, value) { state.tiles[index][field] = field === 'name' ? value : parseFloat(value) || 0; saveData(); renderAll(); }
     function removeTile(index) { if(confirm('ลบกระเบื้องนี้?')) { state.tiles.splice(index, 1); saveData(); renderAll(); } }
@@ -279,7 +284,7 @@
     function updateZoneName(zIdx, value) { state.zones[zIdx].name = value; saveData(); }
     function removeZone(zIdx) { if(confirm('ลบโซนนี้?')) { state.zones.splice(zIdx, 1); saveData(); renderAll(); } }
 
-    function addItem(zIdx) { state.zones[zIdx].items.push({ name: 'จุดที่ปูใหม่', tileId: state.tiles.length ? state.tiles[0].id : '', areas: [{ w: 0, l: 0 }] }); saveData(); renderAll(); }
+    function addItem(zIdx) { state.zones[zIdx].items.push({ name: 'จุดที่ปู', tileId: state.tiles.length ? state.tiles[0].id : '', areas: [{ w: 0, l: 0 }], deductions: [] }); saveData(); renderAll(); }
     function updateItem(zIdx, iIdx, field, value) { state.zones[zIdx].items[iIdx][field] = value; saveData(); if(field === 'tileId') renderAll(); }
     function removeItem(zIdx, iIdx) { state.zones[zIdx].items.splice(iIdx, 1); saveData(); renderAll(); }
 
@@ -287,84 +292,89 @@
     function updateArea(zIdx, iIdx, aIdx, field, value) { state.zones[zIdx].items[iIdx].areas[aIdx][field] = parseFloat(value) || 0; saveData(); renderSummaryOnly(); }
     function removeArea(zIdx, iIdx, aIdx) { state.zones[zIdx].items[iIdx].areas.splice(aIdx, 1); saveData(); renderAll(); }
 
-    // --- Render Functions ---
+    // ฟังก์ชันใหม่สำหรับการจัดการหักลบพื้นที่
+    function addDeduction(zIdx, iIdx) { 
+        if(!state.zones[zIdx].items[iIdx].deductions) state.zones[zIdx].items[iIdx].deductions = [];
+        state.zones[zIdx].items[iIdx].deductions.push({ name: 'หักประตู/หน้าต่าง', w: 0, l: 0 }); 
+        saveData(); renderAll(); 
+    }
+    function updateDeduction(zIdx, iIdx, dIdx, field, value) { 
+        if(field === 'name') state.zones[zIdx].items[iIdx].deductions[dIdx][field] = value;
+        else state.zones[zIdx].items[iIdx].deductions[dIdx][field] = parseFloat(value) || 0; 
+        saveData(); renderSummaryOnly(); 
+    }
+    function removeDeduction(zIdx, iIdx, dIdx) { state.zones[zIdx].items[iIdx].deductions.splice(dIdx, 1); saveData(); renderAll(); }
+
+
+    // --- Render ---
     function renderTiles() {
-        if (!state.tiles || state.tiles.length === 0) {
-            document.getElementById('tile-list').innerHTML = '<tr><td colspan="6" style="text-align:center;">ยังไม่มีข้อมูลกระเบื้อง กรุณากด "+ เพิ่มกระเบื้อง"</td></tr>';
-            return;
-        }
-        
+        if (!state.tiles || state.tiles.length === 0) return document.getElementById('tile-list').innerHTML = '<tr><td colspan="6" style="text-align:center;">ยังไม่มีข้อมูล กรุณากด "+ เพิ่มกระเบื้อง"</td></tr>';
         const html = state.tiles.map((t, idx) => `
             <tr>
                 <td style="text-align: center;">
-                    ${t.image ? 
-                        `<div>
-                            <img src="${t.image}" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ccc; cursor: pointer; border-radius: 4px;" onclick="openModal('${t.image}')" title="คลิกเพื่อดูรูปใหญ่">
-                            <br><button class="btn btn-danger" style="padding: 2px 6px; font-size: 11px; margin-top: 5px;" onclick="removeImage(${idx})">ลบรูป</button>
-                        </div>` 
-                        : 
-                        `<label class="btn btn-outline" style="padding: 4px 8px; font-size: 12px; cursor: pointer;">
-                            + เพิ่มรูป
-                            <input type="file" accept="image/*" style="display: none;" onchange="handleImageUpload(event, ${idx})">
-                        </label>`
-                    }
+                    ${t.image ? `<div><img src="${t.image}" style="width:50px; height:50px; object-fit:cover; border:1px solid #ccc; cursor:pointer; border-radius:4px;" onclick="openModal('${t.image}')">
+                        <br><button class="btn btn-danger" style="padding: 2px 6px; font-size: 11px; margin-top: 5px;" onclick="removeImage(${idx})">ลบรูป</button></div>` 
+                        : `<label class="btn btn-outline" style="padding: 4px 8px; font-size: 12px; cursor: pointer;">+ เพิ่มรูป<input type="file" accept="image/*" style="display: none;" onchange="handleImageUpload(event, ${idx})"></label>`}
                 </td>
                 <td><input type="text" value="${t.name}" onchange="updateTile(${idx}, 'name', this.value)"></td>
                 <td><input type="number" value="${t.w}" onchange="updateTile(${idx}, 'w', this.value)"></td>
                 <td><input type="number" value="${t.l}" onchange="updateTile(${idx}, 'l', this.value)"></td>
                 <td><input type="number" value="${t.boxQty}" onchange="updateTile(${idx}, 'boxQty', this.value)"></td>
                 <td><button class="btn btn-danger" onclick="removeTile(${idx})">ลบ</button></td>
-            </tr>
-        `).join('');
+            </tr>`).join('');
         document.getElementById('tile-list').innerHTML = html;
     }
 
     function renderZones() {
-        if (!state.zones || state.zones.length === 0) {
-            document.getElementById('zone-list').innerHTML = '<div style="text-align:center; padding: 20px; color:#999;">ยังไม่มีข้อมูลโซน กรุณากด "+ เพิ่มโซนใหม่"</div>';
-            return;
-        }
-
+        if (!state.zones || state.zones.length === 0) return document.getElementById('zone-list').innerHTML = '<div style="text-align:center; padding: 20px; color:#999;">ยังไม่มีข้อมูล กรุณากด "+ เพิ่มโซนใหม่"</div>';
         const html = state.zones.map((z, zIdx) => `
             <div class="zone-box">
                 <div class="zone-header">
                     <input type="text" value="${z.name}" onchange="updateZoneName(${zIdx}, this.value)">
-                    <div>
-                        <button class="btn btn-outline" style="font-size:12px; padding:4px 8px;" onclick="addItem(${zIdx})">+ เพิ่มจุดปูกระเบื้อง</button>
-                        <button class="btn btn-danger" onclick="removeZone(${zIdx})">ลบโซน</button>
-                    </div>
+                    <div><button class="btn btn-outline" style="font-size:12px; padding:4px 8px;" onclick="addItem(${zIdx})">+ เพิ่มจุดปู</button>
+                    <button class="btn btn-danger" onclick="removeZone(${zIdx})">ลบโซน</button></div>
                 </div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th width="25%">รายการ/จุดที่ปู</th>
-                            <th width="30%">เลือกรุ่นกระเบื้อง</th>
-                            <th width="40%">ขนาดพื้นที่: กว้าง x ยาว (เมตร)</th>
-                            <th width="5%"></th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th width="20%">จุดที่ปู</th><th width="25%">รุ่นกระเบื้อง</th><th width="50%">ขนาดและพื้นที่ (เมตร)</th><th width="5%"></th></tr></thead>
                     <tbody>
                         ${z.items.map((item, iIdx) => `
                             <tr>
-                                <td><input type="text" value="${item.name}" onchange="updateItem(${zIdx}, ${iIdx}, 'name', this.value)"></td>
-                                <td>
+                                <td valign="top" style="padding-top:15px;"><input type="text" value="${item.name}" onchange="updateItem(${zIdx}, ${iIdx}, 'name', this.value)"></td>
+                                <td valign="top" style="padding-top:15px;">
                                     <select onchange="updateItem(${zIdx}, ${iIdx}, 'tileId', this.value)">
-                                        <option value="">-- เลือกกระเบื้อง --</option>
+                                        <option value="">-- เลือก --</option>
                                         ${state.tiles.map(t => `<option value="${t.id}" ${t.id === item.tileId ? 'selected' : ''}>${t.name}</option>`).join('')}
                                     </select>
                                 </td>
                                 <td>
-                                    ${item.areas.map((area, aIdx) => `
-                                        <div style="display:flex; gap:10px; margin-bottom:5px; align-items:center;">
-                                            <input type="number" step="0.01" class="input-sm" placeholder="กว้าง" value="${area.w || ''}" oninput="updateArea(${zIdx}, ${iIdx}, ${aIdx}, 'w', this.value)">
-                                            <span>x</span>
-                                            <input type="number" step="0.01" class="input-sm" placeholder="ยาว" value="${area.l || ''}" oninput="updateArea(${zIdx}, ${iIdx}, ${aIdx}, 'l', this.value)">
-                                            ${item.areas.length > 1 ? `<button class="btn-danger" style="padding:2px 6px;" onclick="removeArea(${zIdx}, ${iIdx}, ${aIdx})">x</button>` : ''}
-                                        </div>
-                                    `).join('')}
-                                    <button class="btn btn-outline" style="font-size:11px; padding:2px 5px;" onclick="addArea(${zIdx}, ${iIdx})">+ พื้นที่ย่อย</button>
+                                    <div style="margin-bottom: 10px;">
+                                        <span style="font-size: 12px; color: #27ae60; font-weight: bold;">➕ พื้นที่ปูจริง</span>
+                                        ${item.areas.map((area, aIdx) => `
+                                            <div style="display:flex; gap:10px; margin-bottom:5px; margin-top:5px; align-items:center;">
+                                                <input type="number" step="0.01" class="input-sm" value="${area.w || ''}" oninput="updateArea(${zIdx}, ${iIdx}, ${aIdx}, 'w', this.value)" placeholder="กว้าง">
+                                                <span>x</span>
+                                                <input type="number" step="0.01" class="input-sm" value="${area.l || ''}" oninput="updateArea(${zIdx}, ${iIdx}, ${aIdx}, 'l', this.value)" placeholder="ยาว">
+                                                ${item.areas.length > 1 ? `<button class="btn-danger" style="padding:2px 6px;" onclick="removeArea(${zIdx}, ${iIdx}, ${aIdx})">x</button>` : ''}
+                                            </div>
+                                        `).join('')}
+                                        <button class="btn btn-outline" style="font-size:11px; padding:2px 5px;" onclick="addArea(${zIdx}, ${iIdx})">+ เพิ่มพื้นที่ย่อย</button>
+                                    </div>
+                                    
+                                    <div style="padding-top: 10px; border-top: 1px dashed #ccc;">
+                                        <span style="font-size: 12px; color: #e74c3c; font-weight: bold;">➖ หักพื้นที่ (ประตู/หน้าต่าง/เสา)</span>
+                                        ${(item.deductions || []).map((deduct, dIdx) => `
+                                            <div style="display:flex; gap:5px; margin-bottom:5px; margin-top:5px; align-items:center; background: #fdf2f0; padding: 5px; border-radius: 4px;">
+                                                <input type="text" class="input-sm" style="width: 120px !important; text-align: left;" placeholder="ชื่อ (เช่น ประตู)" value="${deduct.name || ''}" onchange="updateDeduction(${zIdx}, ${iIdx}, ${dIdx}, 'name', this.value)">
+                                                <input type="number" step="0.01" class="input-sm" placeholder="กว้าง" value="${deduct.w || ''}" oninput="updateDeduction(${zIdx}, ${iIdx}, ${dIdx}, 'w', this.value)">
+                                                <span>x</span>
+                                                <input type="number" step="0.01" class="input-sm" placeholder="ยาว" value="${deduct.l || ''}" oninput="updateDeduction(${zIdx}, ${iIdx}, ${dIdx}, 'l', this.value)">
+                                                <button class="btn-danger" style="padding:2px 6px;" onclick="removeDeduction(${zIdx}, ${iIdx}, ${dIdx})">x</button>
+                                            </div>
+                                        `).join('')}
+                                        <button class="btn btn-outline" style="font-size:11px; padding:2px 5px; color: #e74c3c; border-color: #e74c3c; margin-top: 5px;" onclick="addDeduction(${zIdx}, ${iIdx})">- เพิ่มจุดหักลบ</button>
+                                    </div>
                                 </td>
-                                <td><button class="btn btn-danger" onclick="removeItem(${zIdx}, ${iIdx})">ลบ</button></td>
+                                <td valign="top" style="padding-top:15px;"><button class="btn btn-danger" onclick="removeItem(${zIdx}, ${iIdx})">ลบ</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -379,26 +389,29 @@
         let summaryData = {};
 
         if (state.tiles) {
-            state.tiles.forEach(t => {
-                summaryData[t.id] = { id: t.id, name: t.name, image: t.image, remark: t.remark || '', totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000 };
-            });
+            state.tiles.forEach(t => { summaryData[t.id] = { id: t.id, name: t.name, image: t.image, remark: t.remark || '', totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000 }; });
         }
-
         if (state.zones) {
             state.zones.forEach(z => {
                 z.items.forEach(item => {
                     if (item.tileId && summaryData[item.tileId]) {
                         let totalArea = 0;
+                        // บวกพื้นที่หลัก
                         item.areas.forEach(a => totalArea += (a.w * a.l));
+                        // ลบพื้นที่หักออก
+                        if(item.deductions) {
+                            item.deductions.forEach(d => totalArea -= (d.w * d.l));
+                        }
+                        // ป้องกันไม่ให้พื้นที่ติดลบกรณีใส่ตัวเลขผิด
+                        if(totalArea < 0) totalArea = 0; 
+                        
                         summaryData[item.tileId].totalSqm += totalArea;
                     }
                 });
             });
         }
 
-        let html = '';
-        let hasData = false;
-        
+        let html = ''; let hasData = false;
         Object.values(summaryData).forEach(data => {
             if (data.totalSqm > 0) {
                 hasData = true;
@@ -408,18 +421,13 @@
 
                 html += `
                     <tr>
-                        <td style="text-align: center;">
-                            ${data.image && data.image.includes('http') ? `<img src="${data.image}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">` : `<span style="color:#aaa; font-size: 12px;">ไม่มีรูป</span>`}
-                        </td>
+                        <td style="text-align: center;">${data.image && data.image.includes('http') ? `<img src="${data.image}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">` : `<span style="color:#aaa; font-size:12px;">ไม่มีรูป</span>`}</td>
                         <td><b>${data.name}</b></td>
                         <td style="text-align: right;">${data.totalSqm.toFixed(2)} ตร.ม.</td>
                         <td style="text-align: right; color:#d35400; font-weight:bold;">${finalTiles} แผ่น</td>
                         <td style="text-align: right; color:#27ae60; font-size:18px; font-weight:bold;">${finalBoxes} กล่อง</td>
-                        <td style="text-align: center;">
-                            <input type="text" placeholder="ระบุหมายเหตุ..." value="${data.remark}" onchange="updateTileRemark('${data.id}', this.value)" style="width: 100%; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 14px;">
-                        </td>
-                    </tr>
-                `;
+                        <td style="text-align: center;"><input type="text" placeholder="ระบุหมายเหตุ..." value="${data.remark}" onchange="updateTileRemark('${data.id}', this.value)" style="width: 100%; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 14px;"></td>
+                    </tr>`;
             }
         });
 
@@ -427,34 +435,22 @@
         document.getElementById('summary-list').innerHTML = html;
     }
 
-    function renderAll() {
-        try { renderTiles(); renderZones(); renderSummaryOnly(); } 
-        catch (e) { console.error("Render Error:", e); }
-    }
+    function renderAll() { try { renderTiles(); renderZones(); renderSummaryOnly(); } catch (e) { console.error("Render Error:", e); } }
 
-    // --- ซิงค์ข้อมูลทั้งหมดลง Google Sheets ---
     async function saveToOnlineDB() {
         const statusEl = document.getElementById('sync-status');
+        statusEl.innerHTML = "🔄 กำลังอัปเดตข้อมูลขึ้นคลาวด์..."; statusEl.style.color = "#2980b9";
 
-        if(WEB_APP_URL.includes("xxxxxxxxxx")) {
-            statusEl.innerHTML = "⚠️ ยังไม่ได้ใส่ลิงก์ Google Sheets (บันทึกเฉพาะในเครื่อง)";
-            statusEl.style.color = "#e74c3c";
-            return;
-        }
-
-        statusEl.innerHTML = "🔄 กำลังอัปเดตข้อมูลขึ้นคลาวด์...";
-        statusEl.style.color = "#2980b9";
-
-        let orderPayload = [];
-        let summaryData = {};
-        
-        state.tiles.forEach(t => {
-            summaryData[t.id] = { name: t.name, totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000, remark: t.remark || '', image: t.image };
-        });
+        let orderPayload = []; let summaryData = {};
+        state.tiles.forEach(t => { summaryData[t.id] = { name: t.name, totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000, remark: t.remark || '', image: t.image }; });
         state.zones.forEach(z => {
             z.items.forEach(item => {
                 if (item.tileId && summaryData[item.tileId]) {
-                    item.areas.forEach(a => summaryData[item.tileId].totalSqm += (a.w * a.l));
+                    let totalArea = 0;
+                    item.areas.forEach(a => totalArea += (a.w * a.l));
+                    if(item.deductions) item.deductions.forEach(d => totalArea -= (d.w * d.l));
+                    if(totalArea < 0) totalArea = 0;
+                    summaryData[item.tileId].totalSqm += totalArea;
                 }
             });
         });
@@ -464,45 +460,22 @@
                 let baseTiles = Math.ceil(data.totalSqm / data.sqmPerTile);
                 let finalTiles = Math.ceil(baseTiles * (1 + (state.wastePercent / 100)));
                 let finalBoxes = data.boxQty > 0 ? Math.ceil(finalTiles / data.boxQty) : 0;
-                
-                orderPayload.push({
-                    name: data.name,
-                    sqm: data.totalSqm.toFixed(2),
-                    tiles: finalTiles,
-                    boxes: finalBoxes,
-                    remark: data.remark,
-                    imageUrl: data.image // ส่งเป็น URL รูปไปลงคอลัมน์ G
-                });
+                orderPayload.push({ name: data.name, sqm: data.totalSqm.toFixed(2), tiles: finalTiles, boxes: finalBoxes, remark: data.remark, imageUrl: data.image });
             }
         });
 
-        if(orderPayload.length === 0) {
-            statusEl.innerHTML = "☁️ ไม่มีข้อมูลสำหรับบันทึก";
-            statusEl.style.color = "#7f8c8d";
-            return;
-        }
+        if(orderPayload.length === 0) return (statusEl.innerHTML = "☁️ ไม่มีข้อมูลสำหรับบันทึกคลาวด์", statusEl.style.color = "#7f8c8d");
 
         try {
             const response = await fetch(WEB_APP_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                body: JSON.stringify({ action: "syncData", items: orderPayload }),
-                redirect: "follow"
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+                body: JSON.stringify({ action: "syncData", projectName: state.name, items: orderPayload }), redirect: "follow"
             });
             const result = await response.json();
-            
             if(result.status === "success") {
-                let now = new Date();
-                statusEl.innerHTML = `✅ บันทึกออนไลน์ล่าสุดเมื่อ ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`;
-                statusEl.style.color = "#27ae60";
-            } else {
-                statusEl.innerHTML = "❌ บันทึกผิดพลาด";
-                statusEl.style.color = "#c0392b";
-            }
-        } catch (error) {
-            statusEl.innerHTML = "❌ ขัดข้องจากการเชื่อมต่อ";
-            statusEl.style.color = "#c0392b";
-        }
+                let now = new Date(); statusEl.innerHTML = `✅ บันทึกคลาวด์ล่าสุดเมื่อ ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`; statusEl.style.color = "#27ae60";
+            } else { statusEl.innerHTML = "❌ บันทึกผิดพลาด"; statusEl.style.color = "#c0392b"; }
+        } catch (error) { statusEl.innerHTML = "❌ ขัดข้องจากการเชื่อมต่อ"; statusEl.style.color = "#c0392b"; }
     }
 
     window.addEventListener('keydown', function(event) { if (event.key === "Escape") closeModal(); });
