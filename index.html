@@ -150,9 +150,6 @@
 </div>
 
 <script>
-    // ------------------------------------------------------------------------------------------
-    // ⚠️ นำ URL ของ Google Apps Script มาวางในเครื่องหมายคำพูดด้านล่างนี้
-    // ------------------------------------------------------------------------------------------
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz6m1XWSFuXHDOIj2H7q8KciecNcnlU4f5YPuYkKhRG4S7q5Q9HqVWWXxSdU82otMQYPw/exec"; 
     
     const defaultProjectState = {
@@ -170,7 +167,6 @@
     let state = null; 
     let autoSaveTimeout = null;
 
-    // โหลดข้อมูลตอนเปิดโปรแกรม
     function loadData() {
         const saved = localStorage.getItem('tileAppCloudSync'); 
         if (saved) {
@@ -188,11 +184,9 @@
         renderProjectSelector();
         renderAll();
 
-        // ⚠️ โหลดข้อมูลจากคลาวด์อัตโนมัติเมื่อเปิดเว็บ
         forceLoadFromCloud();
     }
 
-    // เซฟข้อมูล (แยกเซฟลงเครื่อง และหน่วงเวลาเซฟขึ้นคลาวด์)
     function saveData() {
         saveDataLocalOnly();
         
@@ -208,7 +202,6 @@
         localStorage.setItem('tileAppCloudSync', JSON.stringify(appData));
     }
 
-    // --- ⚠️ ระบบดึงข้อมูลจาก Cloud (Cloud Sync) ---
     async function forceLoadFromCloud() {
         if(WEB_APP_URL.includes("xxxxxxxxxx")) return;
         const statusEl = document.getElementById('sync-status');
@@ -223,12 +216,12 @@
             const result = await response.json();
             
             if(result.status === "success" && result.appData) {
-                appData = result.appData; // เอาข้อมูลจากคลาวด์มาทับของเดิม
+                appData = result.appData;
                 if (!appData.projects[appData.currentId]) appData.currentId = Object.keys(appData.projects)[0];
                 state = appData.projects[appData.currentId];
                 document.getElementById('waste-percent').value = state.wastePercent;
                 
-                saveDataLocalOnly(); // เซฟลงเครื่อง
+                saveDataLocalOnly();
                 renderProjectSelector();
                 renderAll();
                 
@@ -244,7 +237,6 @@
         }
     }
 
-    // --- Backup System ---
     function exportBackup() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
         const dlAnchorElem = document.createElement('a');
@@ -253,7 +245,6 @@
         dlAnchorElem.click();
     }
 
-    // --- Project Manager ---
     function renderProjectSelector() {
         const sel = document.getElementById('project-selector');
         sel.innerHTML = Object.keys(appData.projects).map(id => 
@@ -284,8 +275,7 @@
 
     function deleteProject() {
         if (Object.keys(appData.projects).length <= 1) return alert("ไม่สามารถลบได้ ต้องมีอย่างน้อย 1 โปรเจกต์ในระบบ");
-        if (confirm(`คุณต้องการลบโปรเจกต์ "${state.name}" ใช่หรือไม่?
-ข้อมูลทั้งหมดในโปรเจกต์นี้จะหายไป`)) {
+        if (confirm(`คุณต้องการลบโปรเจกต์ "${state.name}" ใช่หรือไม่?\nข้อมูลทั้งหมดในโปรเจกต์นี้จะหายไป`)) {
             delete appData.projects[appData.currentId];
             appData.currentId = Object.keys(appData.projects)[0]; state = appData.projects[appData.currentId];
             saveData(); renderProjectSelector(); renderAll();
@@ -304,7 +294,6 @@
     function generateId() { return Math.random().toString(36).substr(2, 9); }
     function updateWaste() { state.wastePercent = parseFloat(document.getElementById('waste-percent').value) || 0; saveData(); renderSummaryOnly(); }
 
-    // --- Image Upload ---
     async function handleImageUpload(event, index) {
         const file = event.target.files[0];
         if (!file) return;
@@ -341,7 +330,6 @@
     function openModal(imageSrc) { document.getElementById('modalImg').src = imageSrc; document.getElementById('imageModal').style.display = 'flex'; }
     function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
-    // --- Data Management Functions ---
     function addTile() { state.tiles.push({ id: generateId(), name: 'กระเบื้องใหม่', w: 40, l: 40, boxQty: 10, image: null, remark: '' }); saveData(); renderAll(); }
     function updateTile(index, field, value) { state.tiles[index][field] = field === 'name' ? value : parseFloat(value) || 0; saveData(); renderAll(); }
     function removeTile(index) { if(confirm('ลบกระเบื้องนี้?')) { state.tiles.splice(index, 1); saveData(); renderAll(); } }
@@ -371,7 +359,6 @@
     }
     function removeDeduction(zIdx, iIdx, dIdx) { state.zones[zIdx].items[iIdx].deductions.splice(dIdx, 1); saveData(); renderAll(); }
 
-    // --- ฟังก์ชันส่งออก Excel ---
     function exportToExcel() {
         if (!state) return alert("ไม่มีข้อมูลให้ส่งออก");
         let csvContent = "\uFEFF"; 
@@ -431,7 +418,7 @@
         document.body.removeChild(link);
     }
 
-    // --- Render ---
+    // --- ส่วนที่ปรับปรุง: renderZones เพื่อแสดงพื้นที่สุทธิของแต่ละแถว ---
     function renderTiles() {
         if (!state.tiles || state.tiles.length === 0) return document.getElementById('tile-list').innerHTML = '<tr><td colspan="6" style="text-align:center;">ยังไม่มีข้อมูล กรุณากด "+ เพิ่มกระเบื้อง"</td></tr>';
         const html = state.tiles.map((t, idx) => `
@@ -462,7 +449,14 @@
                 <table>
                     <thead><tr><th width="20%">จุดที่ปู</th><th width="25%">รุ่นกระเบื้อง</th><th width="50%">ขนาดและพื้นที่ (เมตร)</th><th width="5%"></th></tr></thead>
                     <tbody>
-                        ${z.items.map((item, iIdx) => `
+                        ${z.items.map((item, iIdx) => {
+                            // คำนวณพื้นที่สุทธิของแถวนี้
+                            let subTotal = 0;
+                            item.areas.forEach(a => subTotal += (a.w * a.l));
+                            if(item.deductions) item.deductions.forEach(d => subTotal -= (d.w * d.l));
+                            if(subTotal < 0) subTotal = 0;
+                            
+                            return `
                             <tr>
                                 <td valign="top" style="padding-top:15px;"><input type="text" value="${item.name}" onchange="updateItem(${zIdx}, ${iIdx}, 'name', this.value)"></td>
                                 <td valign="top" style="padding-top:15px;">
@@ -498,10 +492,14 @@
                                         `).join('')}
                                         <button class="btn btn-outline" style="font-size:11px; padding:2px 5px; color: #e74c3c; border-color: #e74c3c; margin-top: 5px;" onclick="addDeduction(${zIdx}, ${iIdx})">- เพิ่มจุดหักลบ</button>
                                     </div>
+                                    
+                                    <div style="margin-top: 10px; padding: 6px 12px; background: #e8f8f5; border: 1px solid #1abc9c; border-radius: 4px; text-align: right; color: #16a085; font-size: 14px;">
+                                        <b>รวมพื้นที่จุดนี้ (สุทธิ): <span style="font-size: 16px;">${subTotal.toFixed(2)}</span> ตร.ม.</b>
+                                    </div>
                                 </td>
                                 <td valign="top" style="padding-top:15px;"><button class="btn btn-danger" onclick="removeItem(${zIdx}, ${iIdx})">ลบ</button></td>
                             </tr>
-                        `).join('')}
+                        `;}).join('')}
                     </tbody>
                 </table>
             </div>
@@ -588,7 +586,6 @@
         try {
             const response = await fetch(WEB_APP_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                // ⚠️ ส่ง appData ก้อนใหญ่กลับไปเก็บไว้ในแท็บลับด้วย
                 body: JSON.stringify({ action: "syncData", projectName: state.name, items: orderPayload, appData: appData }), redirect: "follow"
             });
             const result = await response.json();
