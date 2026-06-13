@@ -40,6 +40,7 @@
         .btn-danger { background: #e74c3c; color: white; padding: 6px 10px; font-size: 12px; }
         .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
         .btn-blue { background: #3498db; color: white; }
+        .btn-excel { background: #27ae60; color: white; }
         
         .zone-box { border: 1px solid #bce8f1; border-radius: 6px; margin-bottom: 20px; padding: 15px; background: #f4fcfe; }
         .zone-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
@@ -83,6 +84,7 @@
         <span id="sync-status" style="font-size: 14px; color: #7f8c8d; font-weight: 600; margin-right: auto;">☁️ ระบบบันทึกอัตโนมัติพร้อมทำงาน</span>
         
         <label>⚠️ เผื่อเศษตัด/แตก: <input type="number" id="waste-percent" value="5" min="0" style="width: 70px;" oninput="updateWaste()"> %</label>
+        <button class="btn btn-excel" onclick="exportToExcel()">📊 ส่งออก Excel (.csv)</button>
         <button class="btn btn-danger" onclick="forceClearData()">🧹 ล้างตารางโปรเจกต์นี้</button>
         <button class="btn btn-outline" onclick="window.print()">🖨️ พิมพ์เอกสาร</button>
     </div>
@@ -218,7 +220,8 @@
 
     function deleteProject() {
         if (Object.keys(appData.projects).length <= 1) return alert("ไม่สามารถลบได้ ต้องมีอย่างน้อย 1 โปรเจกต์ในระบบ");
-        if (confirm(`คุณต้องการลบโปรเจกต์ "${state.name}" ใช่หรือไม่?\nข้อมูลทั้งหมดในโปรเจกต์นี้จะหายไป`)) {
+        if (confirm(`คุณต้องการลบโปรเจกต์ "${state.name}" ใช่หรือไม่?
+ข้อมูลทั้งหมดในโปรเจกต์นี้จะหายไป`)) {
             delete appData.projects[appData.currentId];
             appData.currentId = Object.keys(appData.projects)[0]; state = appData.projects[appData.currentId];
             saveData(); renderProjectSelector(); renderAll();
@@ -304,6 +307,84 @@
         saveData(); renderSummaryOnly(); 
     }
     function removeDeduction(zIdx, iIdx, dIdx) { state.zones[zIdx].items[iIdx].deductions.splice(dIdx, 1); saveData(); renderAll(); }
+
+    // --- ฟังก์ชันส่งออกข้อมูลเป็น Excel (.csv รองรับภาษาไทย) ---
+    function exportToExcel() {
+        if (!state) return alert("ไม่มีข้อมูลให้ส่งออก");
+        
+        let csvContent = "\uFEFF"; 
+        
+        csvContent += `ชื่อโปรเจกต์:,${state.name}\n`;
+        csvContent += `การเผื่อเศษตัดแตก:,${state.wastePercent} %\n\n`;
+        
+        csvContent += `1. รายละเอียดกระเบื้อง (Tile Catalog)\n`;
+        csvContent += `รหัส/ชื่อรุ่นกระเบื้อง,กว้าง (ซม.),ยาว (ซม.),บรรจุ (แผ่น/กล่อง),หมายเหตุ,ลิงก์รูปภาพ\n`;
+        
+        state.tiles.forEach(t => {
+            let row = [
+                `"${t.name.replace(/"/g, '""')}"`,
+                t.w,
+                t.l,
+                t.boxQty,
+                `"${(t.remark || '').replace(/"/g, '""')}"`,
+                t.image || ''
+            ];
+            csvContent += row.join(",") + "\n";
+        });
+        
+        csvContent += "\n";
+        
+        csvContent += `2. สรุปยอดสั่งซื้อทั้งหมด (Order Summary)\n`;
+        csvContent += `รุ่นกระเบื้อง,ปริมาณพื้นที่รวม (ตร.ม.),จำนวนที่ต้องใช้ (แผ่น),สรุปจำนวนกล่องที่ต้องสั่งซื้อ,หมายเหตุ\n`;
+        
+        let summaryData = {};
+        state.tiles.forEach(t => {
+            summaryData[t.id] = { name: t.name, remark: t.remark || '', totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000 };
+        });
+        
+        state.zones.forEach(z => {
+            z.items.forEach(item => {
+                if (item.tileId && summaryData[item.tileId]) {
+                    let totalArea = 0;
+                    item.areas.forEach(a => totalArea += (a.w * a.l));
+                    if(item.deductions) item.deductions.forEach(d => totalArea -= (d.w * d.l));
+                    if(totalArea < 0) totalArea = 0;
+                    summaryData[item.tileId].totalSqm += totalArea;
+                }
+            });
+        });
+        
+        let hasSummary = false;
+        Object.values(summaryData).forEach(data => {
+            if (data.totalSqm > 0) {
+                hasSummary = true;
+                let baseTiles = Math.ceil(data.totalSqm / data.sqmPerTile);
+                let finalTiles = Math.ceil(baseTiles * (1 + (state.wastePercent / 100)));
+                let finalBoxes = data.boxQty > 0 ? Math.ceil(finalTiles / data.boxQty) : 0;
+                
+                let row = [
+                    `"${data.name.replace(/"/g, '""')}"`,
+                    data.totalSqm.toFixed(2),
+                    finalTiles,
+                    finalBoxes,
+                    `"${data.remark.replace(/"/g, '""')}"`
+                ];
+                csvContent += row.join(",") + "\n";
+            }
+        });
+        
+        if(!hasSummary) csvContent += "ยังไม่มีการระบุพื้นที่กระเบื้อง,,,\n";
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `สรุปรายการกระเบื้อง_${state.name}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 
 
     // --- Render ---
