@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมคำนวณกระเบื้อง (True Cloud Sync)</title>
+    <title>โปรแกรมคำนวณกระเบื้อง (True Cloud Sync + คิ้วกระเบื้อง)</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -13,6 +13,7 @@
             --card-bg: #ffffff;
             --border: #dee2e6;
             --text: #333;
+            --trim-color: #e67e22; /* สีส้มสำหรับคิ้วกระเบื้อง */
         }
         * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text); margin: 0; padding: 20px; }
@@ -98,10 +99,12 @@
 
     <div class="section-card">
         <div class="section-title">
-            1. รายละเอียดกระเบื้อง (Tile Catalog)
-            <button class="btn btn-primary" onclick="addTile()">+ เพิ่มกระเบื้อง</button>
+            1. รายละเอียดวัสดุ (Material Catalog)
         </div>
-        <table>
+        
+        <h4 style="margin-top: 0; color: var(--primary);">🔹 รายการกระเบื้อง</h4>
+        <button class="btn btn-primary" onclick="addTile()" style="margin-bottom: 10px;">+ เพิ่มกระเบื้อง</button>
+        <table style="margin-bottom: 20px;">
             <thead>
                 <tr>
                     <th style="width: 100px; text-align: center;">รูปกระเบื้อง</th>
@@ -113,6 +116,20 @@
                 </tr>
             </thead>
             <tbody id="tile-list"></tbody>
+        </table>
+
+        <h4 style="color: var(--trim-color); border-top: 1px dashed #ccc; padding-top: 15px;">🔹 รายการคิ้ว / บัวผนัง</h4>
+        <button class="btn" style="background: var(--trim-color); color: white; margin-bottom: 10px;" onclick="addTrim()">+ เพิ่มคิ้ว/บัว</button>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 100px; text-align: center; background-color: #fdfaf7;">รูปภาพ</th>
+                    <th style="background-color: #fdfaf7;">รหัส/ชื่อรุ่น สีคิ้วกระเบื้อง</th>
+                    <th style="background-color: #fdfaf7;">ความยาวต่อเส้น (เมตร)</th>
+                    <th style="width: 60px; background-color: #fdfaf7;"></th>
+                </tr>
+            </thead>
+            <tbody id="trim-list"></tbody>
         </table>
     </div>
 
@@ -132,10 +149,11 @@
             <thead>
                 <tr>
                     <th style="width: 80px; text-align: center;">ตัวอย่าง</th>
-                    <th>รุ่นกระเบื้อง</th>
-                    <th style="text-align: right;">ปริมาณพื้นที่รวม (ตร.ม.)</th>
+                    <th>รุ่นวัสดุ (กระเบื้อง/คิ้ว)</th>
+                    <th>จุดที่ปู (พื้นที่ใช้งาน)</th>
+                    <th style="text-align: right;">ปริมาณรวม (ตร.ม. / เมตร)</th>
                     <th style="text-align: right;">จำนวนที่ต้องใช้ (เผื่อเศษแล้ว)</th>
-                    <th style="text-align: right;">สรุปจำนวนกล่องที่ต้องสั่งซื้อ</th>
+                    <th style="text-align: right;">สรุปจำนวนที่ต้องสั่งซื้อ</th>
                     <th style="text-align: center; width: 250px;">หมายเหตุ</th>
                 </tr>
             </thead>
@@ -146,17 +164,23 @@
 
 <div id="imageModal">
     <span class="close-modal" onclick="closeModal()">&times;</span>
-    <img id="modalImg" src="" alt="ภาพขยายกระเบื้อง">
+    <img id="modalImg" src="" alt="ภาพขยายวัสดุ">
 </div>
 
 <script>
+    // ⚠️ นำ URL ใหม่ล่าสุดมาวางในเครื่องหมายคำพูดด้านล่างนี้
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz6m1XWSFuXHDOIj2H7q8KciecNcnlU4f5YPuYkKhRG4S7q5Q9HqVWWXxSdU82otMQYPw/exec"; 
     
     const defaultProjectState = {
         name: 'โปรเจกต์ลูกค้าใหม่',
         wastePercent: 5,
         tiles: [{ id: 'T1', name: 'TJRP0038-อาปาเช่ แบล็ค', w: 40, l: 40, boxQty: 6, image: null, remark: '' }],
-        zones: [{ id: 'Z1', name: 'พื้นจอดรถ', items: [{ name: 'พื้นที่หลัก', tileId: 'T1', areas: [{ w: 2.6, l: 6.6 }], deductions: [] }] }]
+        trims: [{ id: 'TR1', name: 'คิ้วอลูมิเนียมเหลี่ยม สีเงิน', lengthPerPiece: 2.0, image: null, remark: '' }],
+        zones: [{ 
+            id: 'Z1', name: 'พื้นจอดรถ', 
+            items: [{ name: 'พื้นที่หลัก', tileId: 'T1', areas: [{ w: 2.6, l: 6.6 }], deductions: [] }],
+            trimItems: []
+        }]
     };
 
     let appData = {
@@ -168,7 +192,14 @@
     let autoSaveTimeout = null;
 
     function loadData() {
-        const saved = localStorage.getItem('tileAppCloudSync'); 
+        let saved = localStorage.getItem('tileAppCloudSync'); 
+        
+        // กู้คืนข้อมูลเก่า
+        if (!saved) {
+            saved = localStorage.getItem('tileAppProjectsV2');
+            if (saved) localStorage.setItem('tileAppCloudSync', saved);
+        }
+
         if (saved) {
             try { appData = JSON.parse(saved); } catch (e) { }
         }
@@ -179,11 +210,19 @@
         if (!appData.projects[appData.currentId]) appData.currentId = Object.keys(appData.projects)[0];
 
         state = appData.projects[appData.currentId];
+        
+        // Data Migration สำหรับโปรเจกต์เก่าที่ยังไม่มีคิ้ว
+        if(!state.trims) state.trims = [];
+        if(state.zones) {
+            state.zones.forEach(z => {
+                if(!z.trimItems) z.trimItems = [];
+            });
+        }
+
         document.getElementById('waste-percent').value = state.wastePercent;
         
         renderProjectSelector();
         renderAll();
-
         forceLoadFromCloud();
     }
 
@@ -203,7 +242,7 @@
     }
 
     async function forceLoadFromCloud() {
-        if(WEB_APP_URL.includes("xxxxxxxxxx")) return;
+        if(WEB_APP_URL.includes("xxxxxxxxxx") || WEB_APP_URL === "") return;
         const statusEl = document.getElementById('sync-status');
         statusEl.innerHTML = "🔄 กำลังเช็กข้อมูลอัปเดตจากคลาวด์...";
         statusEl.style.color = "#8e44ad";
@@ -219,6 +258,15 @@
                 appData = result.appData;
                 if (!appData.projects[appData.currentId]) appData.currentId = Object.keys(appData.projects)[0];
                 state = appData.projects[appData.currentId];
+                
+                // Data Migration
+                if(!state.trims) state.trims = [];
+                if(state.zones) {
+                    state.zones.forEach(z => {
+                        if(!z.trimItems) z.trimItems = [];
+                    });
+                }
+
                 document.getElementById('waste-percent').value = state.wastePercent;
                 
                 saveDataLocalOnly();
@@ -228,7 +276,7 @@
                 statusEl.innerHTML = "✅ โหลดข้อมูลล่าสุดจากคลาวด์สำเร็จ";
                 statusEl.style.color = "#27ae60";
             } else {
-                statusEl.innerHTML = "☁️ ฐานข้อมูลคลาวด์ยังว่างเปล่า";
+                statusEl.innerHTML = "☁️ ฐานข้อมูลคลาวด์ยังว่างเปล่า (โหลดข้อมูลจากในเครื่องแทน)";
                 statusEl.style.color = "#7f8c8d";
             }
         } catch (error) { 
@@ -254,6 +302,14 @@
 
     function switchProject(id) {
         appData.currentId = id; state = appData.projects[id];
+        
+        if(!state.trims) state.trims = [];
+        if(state.zones) {
+            state.zones.forEach(z => {
+                if(!z.trimItems) z.trimItems = [];
+            });
+        }
+
         document.getElementById('waste-percent').value = state.wastePercent || 5;
         saveData(); renderAll();
     }
@@ -275,7 +331,8 @@
 
     function deleteProject() {
         if (Object.keys(appData.projects).length <= 1) return alert("ไม่สามารถลบได้ ต้องมีอย่างน้อย 1 โปรเจกต์ในระบบ");
-        if (confirm(`คุณต้องการลบโปรเจกต์ "${state.name}" ใช่หรือไม่?\nข้อมูลทั้งหมดในโปรเจกต์นี้จะหายไป`)) {
+        if (confirm(`คุณต้องการลบโปรเจกต์ "${state.name}" ใช่หรือไม่?
+ข้อมูลทั้งหมดในโปรเจกต์นี้จะหายไป`)) {
             delete appData.projects[appData.currentId];
             appData.currentId = Object.keys(appData.projects)[0]; state = appData.projects[appData.currentId];
             saveData(); renderProjectSelector(); renderAll();
@@ -285,7 +342,8 @@
     function forceClearData() {
         if(confirm(`ต้องการล้างข้อมูลกระเบื้องทั้งหมดในโปรเจกต์ "${state.name}" กลับเป็นค่าเริ่มต้นหรือไม่?`)) {
             state.tiles = [{ id: 'T1', name: 'TJRP0038-อาปาเช่ แบล็ค', w: 40, l: 40, boxQty: 6, image: null, remark: '' }];
-            state.zones = [{ id: 'Z1', name: 'พื้นจอดรถ', items: [{ name: 'พื้นที่หลัก', tileId: 'T1', areas: [{ w: 2.6, l: 6.6 }], deductions: [] }] }];
+            state.trims = [{ id: 'TR1', name: 'คิ้วอลูมิเนียมเหลี่ยม สีเงิน', lengthPerPiece: 2.0, image: null, remark: '' }];
+            state.zones = [{ id: 'Z1', name: 'พื้นจอดรถ', items: [{ name: 'พื้นที่หลัก', tileId: 'T1', areas: [{ w: 2.6, l: 6.6 }], deductions: [] }], trimItems: [] }];
             state.wastePercent = 5; document.getElementById('waste-percent').value = 5;
             saveData(); renderAll();
         }
@@ -294,7 +352,7 @@
     function generateId() { return Math.random().toString(36).substr(2, 9); }
     function updateWaste() { state.wastePercent = parseFloat(document.getElementById('waste-percent').value) || 0; saveData(); renderSummaryOnly(); }
 
-    async function handleImageUpload(event, index) {
+    async function handleImageUpload(event, index, type='tile') {
         const file = event.target.files[0];
         if (!file) return;
         document.getElementById('sync-status').innerHTML = "⏳ กำลังอัปโหลดรูป...";
@@ -319,23 +377,48 @@
                     });
                     const result = await response.json();
                     if(result.status === "success") {
-                        state.tiles[index].image = result.url; saveData(); renderAll();
+                        if(type === 'trim') {
+                            state.trims[index].image = result.url; 
+                        } else {
+                            state.tiles[index].image = result.url; 
+                        }
+                        saveData(); renderAll();
                         document.getElementById('sync-status').innerHTML = "✅ อัปโหลดรูปสำเร็จ"; document.getElementById('sync-status').style.color = "#27ae60";
                     } else alert("อัปโหลดไม่สำเร็จ: " + result.message);
                 } catch (error) { alert("❌ เชื่อมต่อไม่ได้"); }
             }; img.src = e.target.result;
         }; reader.readAsDataURL(file);
     }
-    function removeImage(index) { if(confirm('ลบรูปภาพนี้?')) { state.tiles[index].image = null; saveData(); renderAll(); } }
+    
+    function removeImage(index, type='tile') { 
+        if(confirm('ลบรูปภาพนี้?')) { 
+            if(type === 'trim') state.trims[index].image = null; 
+            else state.tiles[index].image = null; 
+            saveData(); renderAll(); 
+        } 
+    }
+    
     function openModal(imageSrc) { document.getElementById('modalImg').src = imageSrc; document.getElementById('imageModal').style.display = 'flex'; }
     function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
+    // --- Tile Data Management ---
     function addTile() { state.tiles.push({ id: generateId(), name: 'กระเบื้องใหม่', w: 40, l: 40, boxQty: 10, image: null, remark: '' }); saveData(); renderAll(); }
     function updateTile(index, field, value) { state.tiles[index][field] = field === 'name' ? value : parseFloat(value) || 0; saveData(); renderAll(); }
     function removeTile(index) { if(confirm('ลบกระเบื้องนี้?')) { state.tiles.splice(index, 1); saveData(); renderAll(); } }
-    function updateTileRemark(tileId, value) { const tile = state.tiles.find(t => t.id === tileId); if(tile) { tile.remark = value; saveData(); } }
+    
+    // --- Trim Data Management ---
+    function addTrim() { state.trims.push({ id: generateId(), name: 'คิ้วกระเบื้อง/บัวผนัง', lengthPerPiece: 2.0, image: null, remark: '' }); saveData(); renderAll(); }
+    function updateTrim(index, field, value) { state.trims[index][field] = field === 'name' ? value : parseFloat(value) || 0; saveData(); renderAll(); }
+    function removeTrim(index) { if(confirm('ลบรายการคิ้วนี้?')) { state.trims.splice(index, 1); saveData(); renderAll(); } }
 
-    function addZone() { state.zones.push({ id: generateId(), name: 'โซนใหม่', items: [] }); saveData(); renderAll(); }
+    function updateItemRemark(itemId, value, type='tile') { 
+        let list = type === 'trim' ? state.trims : state.tiles;
+        const item = list.find(t => t.id === itemId); 
+        if(item) { item.remark = value; saveData(); } 
+    }
+
+    // --- Zone Data Management ---
+    function addZone() { state.zones.push({ id: generateId(), name: 'โซนใหม่', items: [], trimItems: [] }); saveData(); renderAll(); }
     function updateZoneName(zIdx, value) { state.zones[zIdx].name = value; saveData(); }
     function removeZone(zIdx) { if(confirm('ลบโซนนี้?')) { state.zones.splice(zIdx, 1); saveData(); renderAll(); } }
 
@@ -359,82 +442,145 @@
     }
     function removeDeduction(zIdx, iIdx, dIdx) { state.zones[zIdx].items[iIdx].deductions.splice(dIdx, 1); saveData(); renderAll(); }
 
+    function addTrimItem(zIdx) { 
+        if(!state.zones[zIdx].trimItems) state.zones[zIdx].trimItems = [];
+        state.zones[zIdx].trimItems.push({ name: 'ขอบกันชน/ขอบหน้าต่าง', trimId: state.trims.length ? state.trims[0].id : '', length: 0 }); 
+        saveData(); renderAll(); 
+    }
+    function updateTrimItem(zIdx, tIdx, field, value) { 
+        if(field === 'length') state.zones[zIdx].trimItems[tIdx][field] = parseFloat(value) || 0;
+        else state.zones[zIdx].trimItems[tIdx][field] = value; 
+        saveData(); 
+        if(field === 'trimId') renderAll(); else renderSummaryOnly();
+    }
+    function removeTrimItem(zIdx, tIdx) { state.zones[zIdx].trimItems.splice(tIdx, 1); saveData(); renderAll(); }
+
+    // --- Export Excel ---
     function exportToExcel() {
         if (!state) return alert("ไม่มีข้อมูลให้ส่งออก");
         let csvContent = "\uFEFF"; 
         csvContent += `ชื่อโปรเจกต์:,${state.name}\n`;
         csvContent += `การเผื่อเศษตัดแตก:,${state.wastePercent} %\n\n`;
         
-        csvContent += `1. รายละเอียดกระเบื้อง (Tile Catalog)\n`;
-        csvContent += `รหัส/ชื่อรุ่นกระเบื้อง,กว้าง (ซม.),ยาว (ซม.),บรรจุ (แผ่น/กล่อง),หมายเหตุ,ลิงก์รูปภาพ\n`;
-        
+        csvContent += `1.1 รายละเอียดกระเบื้อง (Tile Catalog)\n`;
+        csvContent += `รหัส/ชื่อรุ่นกระเบื้อง,กว้าง (ซม.),ยาว (ซม.),บรรจุ (แผ่น/กล่อง),หมายเหตุ\n`;
         state.tiles.forEach(t => {
-            let row = [`"${t.name.replace(/"/g, '""')}"`, t.w, t.l, t.boxQty, `"${(t.remark || '').replace(/"/g, '""')}"`, t.image || ''];
+            let row = [`"${t.name.replace(/"/g, '""')}"`, t.w, t.l, t.boxQty, `"${(t.remark || '').replace(/"/g, '""')}"`];
             csvContent += row.join(",") + "\n";
         });
         csvContent += "\n";
+
+        csvContent += `1.2 รายละเอียดคิ้ว/บัวผนัง (Trim Catalog)\n`;
+        csvContent += `รหัส/ชื่อรุ่น สีคิ้วกระเบื้อง,ความยาวต่อเส้น (เมตร),หมายเหตุ\n`;
+        if(state.trims) {
+            state.trims.forEach(t => {
+                let row = [`"${t.name.replace(/"/g, '""')}"`, t.lengthPerPiece, `"${(t.remark || '').replace(/"/g, '""')}"`];
+                csvContent += row.join(",") + "\n";
+            });
+        }
+        csvContent += "\n";
         
         csvContent += `2. สรุปยอดสั่งซื้อทั้งหมด (Order Summary)\n`;
-        csvContent += `รุ่นกระเบื้อง,ปริมาณพื้นที่รวม (ตร.ม.),จำนวนที่ต้องใช้ (แผ่น),สรุปจำนวนกล่องที่ต้องสั่งซื้อ,หมายเหตุ\n`;
+        csvContent += `รุ่นวัสดุ (กระเบื้อง/คิ้ว),จุดที่ปู/ติดตั้ง,ปริมาณรวม (ตร.ม./เมตร),จำนวนที่ต้องใช้ (แผ่น/เส้น),สรุปจำนวนที่ต้องสั่งซื้อ (กล่อง/เส้น),หมายเหตุ\n`;
         
         let summaryData = {};
-        state.tiles.forEach(t => { summaryData[t.id] = { name: t.name, remark: t.remark || '', totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000 }; });
+        state.tiles.forEach(t => { summaryData['tile_'+t.id] = { type:'tile', name: t.name, remark: t.remark || '', total: 0, boxQty: t.boxQty, divider: (t.w * t.l) / 10000, locations: [] }; });
+        if(state.trims) state.trims.forEach(t => { summaryData['trim_'+t.id] = { type:'trim', name: "[คิ้ว] " + t.name, remark: t.remark || '', total: 0, boxQty: 1, divider: t.lengthPerPiece, locations: [] }; });
         
         state.zones.forEach(z => {
             z.items.forEach(item => {
-                if (item.tileId && summaryData[item.tileId]) {
+                if (item.tileId && summaryData['tile_'+item.tileId]) {
                     let totalArea = 0;
                     item.areas.forEach(a => totalArea += (a.w * a.l));
                     if(item.deductions) item.deductions.forEach(d => totalArea -= (d.w * d.l));
                     if(totalArea < 0) totalArea = 0;
-                    summaryData[item.tileId].totalSqm += totalArea;
+                    summaryData['tile_'+item.tileId].total += totalArea;
+                    if (totalArea > 0) {
+                        let locText = `${z.name} (${item.name})`;
+                        if (!summaryData['tile_'+item.tileId].locations.includes(locText)) summaryData['tile_'+item.tileId].locations.push(locText);
+                    }
                 }
             });
+            if(z.trimItems) {
+                z.trimItems.forEach(item => {
+                    if (item.trimId && summaryData['trim_'+item.trimId]) {
+                        let len = parseFloat(item.length) || 0;
+                        summaryData['trim_'+item.trimId].total += len;
+                        if (len > 0) {
+                            let locText = `${z.name} (${item.name})`;
+                            if (!summaryData['trim_'+item.trimId].locations.includes(locText)) summaryData['trim_'+item.trimId].locations.push(locText);
+                        }
+                    }
+                });
+            }
         });
         
         let hasSummary = false;
         Object.values(summaryData).forEach(data => {
-            if (data.totalSqm > 0) {
+            if (data.total > 0) {
                 hasSummary = true;
-                let baseTiles = Math.ceil(data.totalSqm / data.sqmPerTile);
-                let finalTiles = Math.ceil(baseTiles * (1 + (state.wastePercent / 100)));
-                let finalBoxes = data.boxQty > 0 ? Math.ceil(finalTiles / data.boxQty) : 0;
+                let basePieces = Math.ceil(data.total / data.divider);
+                let finalPieces = Math.ceil(basePieces * (1 + (state.wastePercent / 100)));
+                let finalBoxes = data.type === 'trim' ? finalPieces : (data.boxQty > 0 ? Math.ceil(finalPieces / data.boxQty) : 0);
                 
-                let row = [`"${data.name.replace(/"/g, '""')}"`, data.totalSqm.toFixed(2), finalTiles, finalBoxes, `"${data.remark.replace(/"/g, '""')}"`];
+                let locationsStr = data.locations.join(", ");
+                let unit1 = data.type === 'trim' ? 'ม.' : 'ตร.ม.';
+                let unit2 = data.type === 'trim' ? 'เส้น' : 'แผ่น';
+                let unit3 = data.type === 'trim' ? 'เส้น' : 'กล่อง';
+
+                let row = [`"${data.name.replace(/"/g, '""')}"`, `"${locationsStr.replace(/"/g, '""')}"`, `${data.total.toFixed(2)} ${unit1}`, `${finalPieces} ${unit2}`, `${finalBoxes} ${unit3}`, `"${data.remark.replace(/"/g, '""')}"`];
                 csvContent += row.join(",") + "\n";
             }
         });
         
-        if(!hasSummary) csvContent += "ยังไม่มีการระบุพื้นที่กระเบื้อง,,,\n";
+        if(!hasSummary) csvContent += "ยังไม่มีการระบุพื้นที่/ความยาว,,,,, \n";
         
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", `สรุปรายการกระเบื้อง_${state.name}.csv`);
+        link.setAttribute("download", `สรุปรายการ_${state.name}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     }
 
-    // --- ส่วนที่ปรับปรุง: renderZones เพื่อแสดงพื้นที่สุทธิของแต่ละแถว ---
+    // --- Render ---
     function renderTiles() {
-        if (!state.tiles || state.tiles.length === 0) return document.getElementById('tile-list').innerHTML = '<tr><td colspan="6" style="text-align:center;">ยังไม่มีข้อมูล กรุณากด "+ เพิ่มกระเบื้อง"</td></tr>';
-        const html = state.tiles.map((t, idx) => `
-            <tr>
-                <td style="text-align: center;">
-                    ${t.image ? `<div><img src="${t.image}" style="width:50px; height:50px; object-fit:cover; border:1px solid #ccc; cursor:pointer; border-radius:4px;" onclick="openModal('${t.image}')">
-                        <br><button class="btn btn-danger" style="padding: 2px 6px; font-size: 11px; margin-top: 5px;" onclick="removeImage(${idx})">ลบรูป</button></div>` 
-                        : `<label class="btn btn-outline" style="padding: 4px 8px; font-size: 12px; cursor: pointer;">+ เพิ่มรูป<input type="file" accept="image/*" style="display: none;" onchange="handleImageUpload(event, ${idx})"></label>`}
-                </td>
-                <td><input type="text" value="${t.name}" onchange="updateTile(${idx}, 'name', this.value)"></td>
-                <td><input type="number" value="${t.w}" onchange="updateTile(${idx}, 'w', this.value)"></td>
-                <td><input type="number" value="${t.l}" onchange="updateTile(${idx}, 'l', this.value)"></td>
-                <td><input type="number" value="${t.boxQty}" onchange="updateTile(${idx}, 'boxQty', this.value)"></td>
-                <td><button class="btn btn-danger" onclick="removeTile(${idx})">ลบ</button></td>
-            </tr>`).join('');
-        document.getElementById('tile-list').innerHTML = html;
+        if (!state.tiles || state.tiles.length === 0) document.getElementById('tile-list').innerHTML = '<tr><td colspan="6" style="text-align:center;">ยังไม่มีข้อมูล กรุณากด "+ เพิ่มกระเบื้อง"</td></tr>';
+        else {
+            const html = state.tiles.map((t, idx) => `
+                <tr>
+                    <td style="text-align: center;">
+                        ${t.image ? `<div><img src="${t.image}" style="width:50px; height:50px; object-fit:cover; border:1px solid #ccc; cursor:pointer; border-radius:4px;" onclick="openModal('${t.image}')">
+                            <br><button class="btn btn-danger" style="padding: 2px 6px; font-size: 11px; margin-top: 5px;" onclick="removeImage(${idx}, 'tile')">ลบรูป</button></div>` 
+                            : `<label class="btn btn-outline" style="padding: 4px 8px; font-size: 12px; cursor: pointer;">+ เพิ่มรูป<input type="file" accept="image/*" style="display: none;" onchange="handleImageUpload(event, ${idx}, 'tile')"></label>`}
+                    </td>
+                    <td><input type="text" value="${t.name}" onchange="updateTile(${idx}, 'name', this.value)"></td>
+                    <td><input type="number" value="${t.w}" onchange="updateTile(${idx}, 'w', this.value)"></td>
+                    <td><input type="number" value="${t.l}" onchange="updateTile(${idx}, 'l', this.value)"></td>
+                    <td><input type="number" value="${t.boxQty}" onchange="updateTile(${idx}, 'boxQty', this.value)"></td>
+                    <td><button class="btn btn-danger" onclick="removeTile(${idx})">ลบ</button></td>
+                </tr>`).join('');
+            document.getElementById('tile-list').innerHTML = html;
+        }
+
+        if (!state.trims || state.trims.length === 0) document.getElementById('trim-list').innerHTML = '<tr><td colspan="4" style="text-align:center;">ยังไม่มีข้อมูล กรุณากด "+ เพิ่มคิ้ว/บัว"</td></tr>';
+        else {
+            const html2 = state.trims.map((t, idx) => `
+                <tr>
+                    <td style="text-align: center;">
+                        ${t.image ? `<div><img src="${t.image}" style="width:50px; height:50px; object-fit:cover; border:1px solid #ccc; cursor:pointer; border-radius:4px;" onclick="openModal('${t.image}')">
+                            <br><button class="btn btn-danger" style="padding: 2px 6px; font-size: 11px; margin-top: 5px;" onclick="removeImage(${idx}, 'trim')">ลบรูป</button></div>` 
+                            : `<label class="btn btn-outline" style="padding: 4px 8px; font-size: 12px; cursor: pointer;">+ เพิ่มรูป<input type="file" accept="image/*" style="display: none;" onchange="handleImageUpload(event, ${idx}, 'trim')"></label>`}
+                    </td>
+                    <td><input type="text" value="${t.name}" onchange="updateTrim(${idx}, 'name', this.value)"></td>
+                    <td><input type="number" step="0.01" value="${t.lengthPerPiece}" onchange="updateTrim(${idx}, 'lengthPerPiece', this.value)"></td>
+                    <td><button class="btn btn-danger" onclick="removeTrim(${idx})">ลบ</button></td>
+                </tr>`).join('');
+            document.getElementById('trim-list').innerHTML = html2;
+        }
     }
 
     function renderZones() {
@@ -443,14 +589,14 @@
             <div class="zone-box">
                 <div class="zone-header">
                     <input type="text" value="${z.name}" onchange="updateZoneName(${zIdx}, this.value)">
-                    <div><button class="btn btn-outline" style="font-size:12px; padding:4px 8px;" onclick="addItem(${zIdx})">+ เพิ่มจุดปู</button>
+                    <div><button class="btn btn-outline" style="font-size:12px; padding:4px 8px;" onclick="addItem(${zIdx})">+ เพิ่มจุดปูกระเบื้อง</button>
                     <button class="btn btn-danger" onclick="removeZone(${zIdx})">ลบโซน</button></div>
                 </div>
                 <table>
-                    <thead><tr><th width="20%">จุดที่ปู</th><th width="25%">รุ่นกระเบื้อง</th><th width="50%">ขนาดและพื้นที่ (เมตร)</th><th width="5%"></th></tr></thead>
+                    <thead><tr><th width="20%">จุดที่ปู (กระเบื้อง)</th><th width="25%">รุ่นกระเบื้อง</th><th width="50%">ขนาดและพื้นที่ (เมตร)</th><th width="5%"></th></tr></thead>
                     <tbody>
+                        ${z.items.length === 0 ? '<tr><td colspan="4" style="color:#aaa; font-size:13px; text-align:center;">ยังไม่มีการระบุพื้นที่กระเบื้อง</td></tr>' : ''}
                         ${z.items.map((item, iIdx) => {
-                            // คำนวณพื้นที่สุทธิของแถวนี้
                             let subTotal = 0;
                             item.areas.forEach(a => subTotal += (a.w * a.l));
                             if(item.deductions) item.deductions.forEach(d => subTotal -= (d.w * d.l));
@@ -502,6 +648,33 @@
                         `;}).join('')}
                     </tbody>
                 </table>
+                
+                <div style="margin-top: 15px; border-top: 2px dashed #ccc; padding-top: 15px; background: #fffcf8; padding-bottom: 10px; border-radius: 6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding: 0 10px;">
+                        <b style="color:var(--trim-color); font-size: 15px;">🔸 คิ้วกระเบื้อง / บัวผนัง (Trim) ประจำโซนนี้</b>
+                        <button class="btn btn-outline" style="font-size:11px; padding:2px 5px; color:var(--trim-color); border-color:var(--trim-color);" onclick="addTrimItem(${zIdx})">+ เพิ่มคิ้วติดผนัง</button>
+                    </div>
+                    ${(!z.trimItems || z.trimItems.length === 0) ? '' : `
+                    <table style="background: #fffcf8; min-width: 100%; border:none;">
+                        <thead><tr><th width="30%" style="background:#fcf3eb; color:#d35400;">จุดที่ติดตั้ง (คิ้ว)</th><th width="40%" style="background:#fcf3eb; color:#d35400;">รุ่นคิ้ว</th><th width="20%" style="background:#fcf3eb; color:#d35400;">ความยาวรวม (เมตร)</th><th width="10%" style="background:#fcf3eb;"></th></tr></thead>
+                        <tbody>
+                            ${z.trimItems.map((tItem, tIdx) => `
+                                <tr>
+                                    <td><input type="text" value="${tItem.name}" onchange="updateTrimItem(${zIdx}, ${tIdx}, 'name', this.value)"></td>
+                                    <td>
+                                        <select onchange="updateTrimItem(${zIdx}, ${tIdx}, 'trimId', this.value)">
+                                            <option value="">-- เลือกคิ้ว --</option>
+                                            ${state.trims.map(tr => `<option value="${tr.id}" ${tr.id === tItem.trimId ? 'selected' : ''}>${tr.name}</option>`).join('')}
+                                        </select>
+                                    </td>
+                                    <td><input type="number" step="0.01" value="${tItem.length}" oninput="updateTrimItem(${zIdx}, ${tIdx}, 'length', this.value)" style="border:1px solid #f39c12;"></td>
+                                    <td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeTrimItem(${zIdx}, ${tIdx})">ลบ</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    `}
+                </div>
             </div>
         `).join('');
         document.getElementById('zone-list').innerHTML = html;
@@ -512,43 +685,72 @@
         let summaryData = {};
 
         if (state.tiles) {
-            state.tiles.forEach(t => { summaryData[t.id] = { id: t.id, name: t.name, image: t.image, remark: t.remark || '', totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000 }; });
+            state.tiles.forEach(t => { summaryData['tile_'+t.id] = { type: 'tile', id: t.id, name: t.name, image: t.image, remark: t.remark || '', total: 0, boxQty: t.boxQty, divider: (t.w * t.l) / 10000, locations: [] }; });
         }
+        if (state.trims) {
+            state.trims.forEach(t => { summaryData['trim_'+t.id] = { type: 'trim', id: t.id, name: "[คิ้ว/บัว] " + t.name, image: t.image, remark: t.remark || '', total: 0, boxQty: 1, divider: t.lengthPerPiece, locations: [] }; });
+        }
+
         if (state.zones) {
             state.zones.forEach(z => {
                 z.items.forEach(item => {
-                    if (item.tileId && summaryData[item.tileId]) {
+                    if (item.tileId && summaryData['tile_'+item.tileId]) {
                         let totalArea = 0;
                         item.areas.forEach(a => totalArea += (a.w * a.l));
                         if(item.deductions) item.deductions.forEach(d => totalArea -= (d.w * d.l));
                         if(totalArea < 0) totalArea = 0; 
-                        summaryData[item.tileId].totalSqm += totalArea;
+                        summaryData['tile_'+item.tileId].total += totalArea;
+                        if (totalArea > 0) {
+                            let locText = `${z.name} (${item.name})`;
+                            if (!summaryData['tile_'+item.tileId].locations.includes(locText)) summaryData['tile_'+item.tileId].locations.push(locText);
+                        }
                     }
                 });
+                if(z.trimItems) {
+                    z.trimItems.forEach(item => {
+                        if (item.trimId && summaryData['trim_'+item.trimId]) {
+                            let len = parseFloat(item.length) || 0;
+                            summaryData['trim_'+item.trimId].total += len;
+                            if (len > 0) {
+                                let locText = `${z.name} (${item.name})`;
+                                if (!summaryData['trim_'+item.trimId].locations.includes(locText)) summaryData['trim_'+item.trimId].locations.push(locText);
+                            }
+                        }
+                    });
+                }
             });
         }
 
         let html = ''; let hasData = false;
         Object.values(summaryData).forEach(data => {
-            if (data.totalSqm > 0) {
+            if (data.total > 0) {
                 hasData = true;
-                let baseTiles = Math.ceil(data.totalSqm / data.sqmPerTile);
-                let finalTiles = Math.ceil(baseTiles * (1 + (wastePercent / 100)));
-                let finalBoxes = data.boxQty > 0 ? Math.ceil(finalTiles / data.boxQty) : 0;
+                let basePieces = Math.ceil(data.total / data.divider);
+                let finalPieces = Math.ceil(basePieces * (1 + (wastePercent / 100)));
+                let finalBoxes = data.type === 'trim' ? finalPieces : (data.boxQty > 0 ? Math.ceil(finalPieces / data.boxQty) : 0);
+                
+                let locColor = data.type === 'trim' ? '#d35400' : '#16a085';
+                let locationsHtml = data.locations.length > 0 ? `<div style="font-size: 13px; color: ${locColor}; line-height: 1.4;">📍 ${data.locations.join('<br>📍 ')}</div>` : '-';
+                
+                let unit1 = data.type === 'trim' ? 'ม.' : 'ตร.ม.';
+                let unit2 = data.type === 'trim' ? 'เส้น' : 'แผ่น';
+                let unit3 = data.type === 'trim' ? 'เส้น' : 'กล่อง';
+                let bgStyle = data.type === 'trim' ? 'background:#fffcf8;' : '';
 
                 html += `
-                    <tr>
+                    <tr style="${bgStyle}">
                         <td style="text-align: center;">${data.image && data.image.includes('http') ? `<img src="${data.image}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">` : `<span style="color:#aaa; font-size:12px;">ไม่มีรูป</span>`}</td>
                         <td><b>${data.name}</b></td>
-                        <td style="text-align: right;">${data.totalSqm.toFixed(2)} ตร.ม.</td>
-                        <td style="text-align: right; color:#d35400; font-weight:bold;">${finalTiles} แผ่น</td>
-                        <td style="text-align: right; color:#27ae60; font-size:18px; font-weight:bold;">${finalBoxes} กล่อง</td>
-                        <td style="text-align: center;"><input type="text" placeholder="ระบุหมายเหตุ..." value="${data.remark}" onchange="updateTileRemark('${data.id}', this.value)" style="width: 100%; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 14px;"></td>
+                        <td>${locationsHtml}</td>
+                        <td style="text-align: right;">${data.total.toFixed(2)} ${unit1}</td>
+                        <td style="text-align: right; color:#d35400; font-weight:bold;">${finalPieces} ${unit2}</td>
+                        <td style="text-align: right; color:#27ae60; font-size:18px; font-weight:bold;">${finalBoxes} ${unit3}</td>
+                        <td style="text-align: center;"><input type="text" placeholder="ระบุหมายเหตุ..." value="${data.remark}" onchange="updateItemRemark('${data.id}', this.value, '${data.type}')" style="width: 100%; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 14px;"></td>
                     </tr>`;
             }
         });
 
-        if(!hasData) html = '<tr><td colspan="6" style="text-align:center; color:#999;">ยังไม่มีการระบุพื้นที่กระเบื้อง</td></tr>';
+        if(!hasData) html = '<tr><td colspan="7" style="text-align:center; color:#999;">ยังไม่มีการระบุพื้นที่/ความยาว</td></tr>';
         document.getElementById('summary-list').innerHTML = html;
     }
 
@@ -559,25 +761,50 @@
         statusEl.innerHTML = "🔄 กำลังอัปเดตข้อมูลขึ้นคลาวด์..."; statusEl.style.color = "#2980b9";
 
         let orderPayload = []; let summaryData = {};
-        state.tiles.forEach(t => { summaryData[t.id] = { name: t.name, totalSqm: 0, boxQty: t.boxQty, sqmPerTile: (t.w * t.l) / 10000, remark: t.remark || '', image: t.image }; });
+        
+        state.tiles.forEach(t => { summaryData['tile_'+t.id] = { type:'tile', name: t.name, total: 0, boxQty: t.boxQty, divider: (t.w * t.l) / 10000, remark: t.remark || '', image: t.image, locations: [] }; });
+        if(state.trims) state.trims.forEach(t => { summaryData['trim_'+t.id] = { type:'trim', name: "[คิ้ว] " + t.name, total: 0, boxQty: 1, divider: t.lengthPerPiece, remark: t.remark || '', image: t.image, locations: [] }; });
+
         state.zones.forEach(z => {
             z.items.forEach(item => {
-                if (item.tileId && summaryData[item.tileId]) {
+                if (item.tileId && summaryData['tile_'+item.tileId]) {
                     let totalArea = 0;
                     item.areas.forEach(a => totalArea += (a.w * a.l));
                     if(item.deductions) item.deductions.forEach(d => totalArea -= (d.w * d.l));
                     if(totalArea < 0) totalArea = 0;
-                    summaryData[item.tileId].totalSqm += totalArea;
+                    summaryData['tile_'+item.tileId].total += totalArea;
+                    if (totalArea > 0) {
+                        let locText = `${z.name} (${item.name})`;
+                        if (!summaryData['tile_'+item.tileId].locations.includes(locText)) summaryData['tile_'+item.tileId].locations.push(locText);
+                    }
                 }
             });
+            if(z.trimItems) {
+                z.trimItems.forEach(item => {
+                    if (item.trimId && summaryData['trim_'+item.trimId]) {
+                        let len = parseFloat(item.length) || 0;
+                        summaryData['trim_'+item.trimId].total += len;
+                        if (len > 0) {
+                            let locText = `${z.name} (${item.name})`;
+                            if (!summaryData['trim_'+item.trimId].locations.includes(locText)) summaryData['trim_'+item.trimId].locations.push(locText);
+                        }
+                    }
+                });
+            }
         });
 
         Object.values(summaryData).forEach(data => {
-            if (data.totalSqm > 0) {
-                let baseTiles = Math.ceil(data.totalSqm / data.sqmPerTile);
-                let finalTiles = Math.ceil(baseTiles * (1 + (state.wastePercent / 100)));
-                let finalBoxes = data.boxQty > 0 ? Math.ceil(finalTiles / data.boxQty) : 0;
-                orderPayload.push({ name: data.name, sqm: data.totalSqm.toFixed(2), tiles: finalTiles, boxes: finalBoxes, remark: data.remark, imageUrl: data.image });
+            if (data.total > 0) {
+                let basePieces = Math.ceil(data.total / data.divider);
+                let finalPieces = Math.ceil(basePieces * (1 + (state.wastePercent / 100)));
+                let finalBoxes = data.type === 'trim' ? finalPieces : (data.boxQty > 0 ? Math.ceil(finalPieces / data.boxQty) : 0);
+                
+                let nameWithLoc = data.name + (data.locations.length > 0 ? ` [ปู/ติดที่: ${data.locations.join(', ')}]` : '');
+                let sqmText = data.type === 'trim' ? data.total.toFixed(2) + " ม." : data.total.toFixed(2);
+                let tileText = data.type === 'trim' ? finalPieces + " เส้น" : finalPieces;
+                let boxText = data.type === 'trim' ? finalBoxes + " เส้น" : finalBoxes;
+
+                orderPayload.push({ name: nameWithLoc, sqm: sqmText, tiles: tileText, boxes: boxText, remark: data.remark, imageUrl: data.image });
             }
         });
 
@@ -598,6 +825,5 @@
     window.addEventListener('keydown', function(event) { if (event.key === "Escape") closeModal(); });
     loadData();
 </script>
-
 </body>
 </html>
